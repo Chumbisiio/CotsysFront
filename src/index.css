@@ -1,0 +1,17 @@
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: "Inter", Roboto, -apple-system, "Segoe UI", sans-serif;
+  background: linear-gradient(180deg, #c8d8e4, #f2f2f2);
+  min-height: 100vh;
+}
+
+button { font-family: inherit; }
+
