@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { login } from '../api/auth';
+import { setTokens } from '../auth/tokenStore';
 
 const PALETTE = {
   primary: '#2b6777',
@@ -9,8 +11,35 @@ const PALETTE = {
 };
 
 export default function Login({ onLogin }) {
-  const [userVal, setUserVal] = useState('');
-  const [passVal, setPassVal] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    try {
+      const tokens = await login({ email, password });
+      setTokens(tokens.access_token, tokens.refresh_token);
+      // Notificar al parent para cambiar la vista sin recargar.
+      if (typeof onLogin === 'function') {
+        onLogin();
+      } else {
+        // Fallback: recarga (mantendrá login porque App.jsx inicia en 'login').
+        window.location.href = '/';
+      }
+    } catch (err) {
+      const status = err?.response?.status;
+      const data = err?.response?.data;
+      let msg = typeof data === 'string' ? data : (data?.message || err.message || 'Error de autenticación');
+      if (status === 401 || status === 403) msg = 'Credenciales inválidas. Verifica usuario y contraseña.';
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div style={{
@@ -35,7 +64,7 @@ export default function Login({ onLogin }) {
         border: `1px solid ${PALETTE.light}`
       }}>
 
-        <header style={{textAlign: 'center', marginBottom: 18}}>
+        <header style={{ textAlign: 'center', marginBottom: 18 }}>
           <h1 style={{
             margin: 0,
             fontSize: 28,
@@ -54,15 +83,16 @@ export default function Login({ onLogin }) {
         </header>
 
         <section aria-labelledby="login-form">
-          <form style={{display: 'grid', gap: 12}} onSubmit={(e)=>{e.preventDefault(); onLogin && onLogin();}}>
+          <form style={{ display: 'grid', gap: 12 }} onSubmit={handleSubmit}>
 
-            <label style={{fontSize: 13, color: '#223'}} htmlFor="username">Usuario</label>
+            <label style={{ fontSize: 13, color: '#223' }} htmlFor="username">Usuario</label>
             <input
               id="username"
               name="username"
-              value={userVal}
-              onChange={(e)=>setUserVal(e.target.value)}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="ingresa tu usuario"
+              required
               style={{
                 padding: '12px 14px',
                 borderRadius: 10,
@@ -73,13 +103,14 @@ export default function Login({ onLogin }) {
               }}
             />
 
-            <label style={{fontSize: 13, color: '#223'}} htmlFor="password">Contraseña</label>
+            <label style={{ fontSize: 13, color: '#223' }} htmlFor="password">Contraseña</label>
             <input
               id="password"
               name="password"
               type="password"
-              value={passVal}
-              onChange={(e)=>setPassVal(e.target.value)}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
               placeholder="••••••••"
               style={{
                 padding: '12px 14px',
@@ -93,6 +124,7 @@ export default function Login({ onLogin }) {
 
             <button
               type="submit"
+              disabled={loading}
               style={{
                 marginTop: 6,
                 padding: '12px 14px',
@@ -105,8 +137,9 @@ export default function Login({ onLogin }) {
                 cursor: 'pointer'
               }}
             >
-              Iniciar sesión
+              {loading ? 'Ingresando...' : 'Iniciar sesión'}
             </button>
+            {error && <p style={{ color: 'red' }}>{error}</p>}
 
           </form>
         </section>

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { getAccessToken, clearTokens } from './auth/tokenStore';
 import Login from './components/Login';
 import Home from './components/Home';
 import CreateUser from './components/CreateUser';
@@ -7,7 +8,8 @@ import Cotizacion from './components/Cotizacion';
 import EditRoles from './components/EditRoles';
 
 export default function App() {
-  const [view, setView] = useState('login');
+  const initialView = getAccessToken() ? 'home' : 'login';
+  const [view, setView] = useState(initialView);
   const fakeUser = { name: 'Empresa - Usuario' };
 
   return (
@@ -16,7 +18,10 @@ export default function App() {
       {view === 'home' && (
         <Home
           user={fakeUser}
-          onLogout={() => setView('login')}
+          onLogout={() => {
+            clearTokens();
+            setView('login');
+          }}
           onNavigate={(v) => setView(v)}
         />
       )}

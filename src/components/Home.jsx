@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { clearTokens } from '../auth/tokenStore';
+import { logout } from '../api/auth';
 
 const PALETTE_HOME = {
   primary: '#2b6777',
@@ -77,7 +79,11 @@ export default function Home({ user = { name: 'Usuario' }, onLogout, onNavigate 
             <div style={{ fontSize: 14 }}>{user.name}</div>
           </div>
 
-          <button onClick={onLogout} style={{
+          <button onClick={async () => {
+            await logout();
+            clearTokens();
+            if (typeof onLogout === 'function') onLogout();
+          }} style={{
             background: 'transparent',
             border: '1px solid rgba(0,0,0,0.06)',
             padding: '8px 10px',
