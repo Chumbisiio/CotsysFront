@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createUsuario } from '../api/auth';
 
 const PALETTE = {
   primary: '#2b6777',
@@ -24,20 +25,43 @@ export default function CreateUser({ user = { name: 'Usuario' }, onCancel }) {
     password: '',
     activo: true
   });
-
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [showToast, setShowToast] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    try {
+      await createUsuario({
+        nombre: form.nombre,
+        email: form.email,
+        rol: form.rol,
+        password: form.password
+      });
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 2000);
+      setForm({nombre: '', email: '', rol: '', password: ''});
+    } catch (err) {
+      const status = err?.response?.status;
+      const data = err?.response?.data;
+      let base = typeof data === 'string' ? data : (data?.message || data?.error || data?.detail);
+      let msg = base || err.message || 'Error al crear usuario';
+      // Duplicado de email detectado por status o por mensaje
+      if (status === 403 || /registrad|duplicad/i.test(msg)) {
+        msg = 'El email ya está registrado';
+      }
+      setError(msg);
+      console.error('[CreateUser] Error creación:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setForm(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 2000);
-
-    setForm({ id_usuario: '', nombre: '', email: '', rol: '', password: '', activo: true });
   };
 
   return (
@@ -92,6 +116,20 @@ export default function CreateUser({ user = { name: 'Usuario' }, onCancel }) {
             <p style={{ marginTop: 8, color: '#445', opacity: 0.9 }}>Rellena los datos del nuevo usuario.</p>
           </div>
 
+          {error && (
+            <div role="alert" style={{
+              margin: '0 0 12px 0',
+              background: '#ffe5e5',
+              color: '#9b1c1c',
+              border: '1px solid #ffc9c9',
+              padding: '10px 12px',
+              borderRadius: 10,
+              fontWeight: 600
+            }}>
+              {error}
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} style={{
             background: PALETTE.white,
             padding: 20,
@@ -105,45 +143,31 @@ export default function CreateUser({ user = { name: 'Usuario' }, onCancel }) {
               gap: 14,
               alignItems: 'center'
             }}>
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <label style={{ fontSize: 13, marginBottom: 6 }}>ID usuario</label>
-                <input
-                  name="id_usuario"
-                  value={form.id_usuario}
-                  onChange={handleChange}
-                  placeholder="auto (opcional)"
-                  style={inputStyle()}
-                />
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <label style={{ fontSize: 13, marginBottom: 6 }}>Rol</label>
-                <select name="rol" value={form.rol} onChange={handleChange} style={selectStyle()}>
-                  <option value="">Seleccionar rol</option>
-                  <option value="administrador">Administrador</option>
-                  <option value="operador">Operador</option>
-                  <option value="gerente">Gerente</option>
-                </select>
-              </div>
 
               <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column' }}>
                 <label style={{ fontSize: 13, marginBottom: 6 }}>Nombre</label>
-                <input name="nombre" value={form.nombre} onChange={handleChange} placeholder="Nombre completo" style={inputStyle()} />
+                <input name="nombre" value={form.nombre} onChange={handleChange} placeholder="Nombre completo" required style={inputStyle()}/>
+              </div>
+
+              <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column' }}>
+                <label style={{ fontSize: 13, marginBottom: 6 }}>Rol</label>
+                <select name="rol" value={form.rol} onChange={handleChange} required style={selectStyle()}>
+                  <option value="">Seleccionar rol</option>
+                  <option value="Administrador">Administrador</option>
+                  <option value="Comercial">Usuario Comercial</option>
+                  <option value="Técnico">Líder Tecnico</option>
+                  <option value="Gerente">Gerente</option>
+                </select>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <label style={{ fontSize: 13, marginBottom: 6 }}>Email</label>
-                <input name="email" value={form.email} onChange={handleChange} placeholder="correo@empresa.com" style={inputStyle()} />
+                <input name="email" value={form.email} onChange={handleChange} placeholder="correo@inst.com" required style={inputStyle()}/>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <label style={{ fontSize: 13, marginBottom: 6 }}>Contraseña</label>
-                <input name="password" value={form.password} onChange={handleChange} placeholder="********" type="password" style={inputStyle()} />
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <input id="activo" name="activo" type="checkbox" checked={form.activo} onChange={handleChange} />
-                <label htmlFor="activo" style={{ fontSize: 14 }}>Activo</label>
+                <input name="password" value={form.password} onChange={handleChange} placeholder="********" type="password" required style={inputStyle()}/>
               </div>
             </div>
 
@@ -168,7 +192,7 @@ export default function CreateUser({ user = { name: 'Usuario' }, onCancel }) {
                 cursor: 'pointer',
                 boxShadow: '0 8px 18px rgba(43,103,119,0.12)'
               }}>
-                Guardar usuario
+                {loading ? 'Creando usuario...' : 'Guardar usuario'}
               </button>
             </div>
           </form>
@@ -191,7 +215,7 @@ export default function CreateUser({ user = { name: 'Usuario' }, onCancel }) {
           borderRadius: 10,
           boxShadow: '0 8px 20px rgba(0,0,0,0.16)'
         }}>
-          Usuario guardado (simulación)
+          Usuario guardado correctamente.
         </div>
       )}
 
