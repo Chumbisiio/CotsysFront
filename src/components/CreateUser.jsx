@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { createUsuario } from '../api/auth';
+import { createUsuario } from '../api/user';
 
 const PALETTE = {
   primary: '#2b6777',

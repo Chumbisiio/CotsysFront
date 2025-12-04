@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { getUsuarios, updateUsuarios } from '../api/user';
 
 const PALETTE = {
   primary: '#2b6777',
@@ -8,18 +9,41 @@ const PALETTE = {
   accent: '#52ab98'
 };
 
-const rolesDisponibles = ['administrador', 'gerente', 'operador', 'invitado'];
+const rolesDisponibles = ['Administrador', 'Comercial', 'Gerente', 'Técnico'];
 
 export default function EditRoles({ user = { name: 'Empresa - Usuario' }, onCancel }) {
-  // mock de usuarios (basado en tu tabla usuario)
-  const [usuarios, setUsuarios] = useState([
-    { id_usuario: 1, nombre: 'María Pérez', email: 'maria@empresa.com', rol: 'administrador', estado: true },
-    { id_usuario: 2, nombre: 'Juan López', email: 'juan@empresa.com', rol: 'operador', estado: true },
-    { id_usuario: 3, nombre: 'Ana Gómez', email: 'ana@empresa.com', rol: 'gerente', estado: false }
-  ]);
-
+  const [usuarios, setUsuarios] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [editBuffer, setEditBuffer] = useState({}); // cambios temporales por usuario
   const [showToast, setShowToast] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const fetchUsuarios = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await getUsuarios();
+        // Normaliza las claves desde el backend al formato esperado por la tabla
+        const normalized = (Array.isArray(data) ? data : []).map(u => ({
+          id_usuario: u.id_usuario ?? u.id ?? u.userId ?? u.codigo ?? null,
+          nombre: u.nombre ?? u.name ?? u.fullName ?? '',
+          email: u.email ?? u.correo ?? u.mail ?? '',
+          rol: u.rol ?? u.role ?? '',
+          estado: typeof u.estado === 'boolean' ? u.estado : (u.activo ?? u.enabled ?? false)
+        })).filter(u => u.id_usuario !== null);
+        setUsuarios(normalized);
+      } catch (err) {
+        const msg = err?.response?.data?.message || err.message || 'Error al cargar usuarios';
+        setError(msg);
+        console.error('[EditRoles] Error cargando usuarios:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchUsuarios();
+  }, []);
 
   const handleRoleChange = (id, newRole) => {
     setEditBuffer(prev => ({ ...prev, [id]: { ...(prev[id] || usuarios.find(u => u.id_usuario === id)), rol: newRole } }));
@@ -29,23 +53,67 @@ export default function EditRoles({ user = { name: 'Empresa - Usuario' }, onCanc
     setEditBuffer(prev => ({ ...prev, [id]: { ...(prev[id] || usuarios.find(u => u.id_usuario === id)), estado: checked } }));
   };
 
-  const applyChanges = (id) => {
+  const applyChanges = async (id) => {
     const changed = editBuffer[id];
     if (!changed) return;
-    setUsuarios(prev => prev.map(u => u.id_usuario === id ? { ...u, ...changed } : u));
-    const next = { ...editBuffer };
-    delete next[id];
-    setEditBuffer(next);
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 1800);
+    
+    setSaving(true);
+    setError(null);
+    try {
+      const payload = [{
+        email: changed.email,
+        rol: changed.rol,
+        estado: changed.estado
+      }];
+      
+      await updateUsuarios(payload);
+      
+      // Su hay éxito se actualizar UI
+      setUsuarios(prev => prev.map(u => u.id_usuario === id ? { ...u, ...changed } : u));
+      const next = { ...editBuffer };
+      delete next[id];
+      setEditBuffer(next);
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 1800);
+    } catch (err) {
+      const msg = err?.response?.data?.message || err.message || 'Error al guardar cambios';
+      setError(msg);
+      console.error('[EditRoles] Error guardando cambios:', err);
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const applyAll = () => {
-    const updated = usuarios.map(u => editBuffer[u.id_usuario] ? { ...u, ...editBuffer[u.id_usuario] } : u);
-    setUsuarios(updated);
-    setEditBuffer({});
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 1800);
+  const applyAll = async () => {
+    if (Object.keys(editBuffer).length === 0) return;
+    
+    setSaving(true);
+    setError(null);
+    try {
+      // Preparar payload: lista de todos los usuarios con cambios
+      const payload = Object.values(editBuffer).map(u => ({
+        email: u.email,
+        rol: u.rol,
+        estado: u.estado
+      }));
+      
+      await updateUsuarios(payload);
+      
+      // Éxito: actualizar UI
+      const updated = usuarios.map(u => 
+        editBuffer[u.id_usuario] ? { ...u, ...editBuffer[u.id_usuario] } : u
+      );
+      setUsuarios(updated);
+      setEditBuffer({});
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 1800);
+    } catch (err) {
+      const msg = err?.response?.data?.message || err.message || 'Error al guardar cambios';
+      setError(msg);
+      console.error('[EditRoles] Error guardando todos los cambios:', err);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -69,18 +137,42 @@ export default function EditRoles({ user = { name: 'Empresa - Usuario' }, onCanc
       <div style={{ flex: 1, padding: 20 }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
 
+          {/* Banner de error */}
+          {error && (
+            <div role="alert" style={{
+              margin: '0 0 12px 0',
+              background: '#ffe5e5',
+              color: '#9b1c1c',
+              border: '1px solid #ffc9c9',
+              padding: '10px 12px',
+              borderRadius: 10,
+              fontWeight: 600
+            }}>
+              {error}
+            </div>
+          )}
+
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
             <div>
-              <h2 style={{ margin: 0, color: PALETTE.primary }}>Editar roles</h2>
-              <p style={{ margin: 0, color: '#445', opacity: 0.9 }}>Asigna o modifica roles y el estado de los usuarios (visual).</p>
+              <h2 style={{ margin: 0, color: PALETTE.primary }}>Editar roles </h2>
+              <p style={{ margin: 0, color: '#445', opacity: 0.9 }}>Asigna o modifica roles y el estado de los usuarios.</p>
             </div>
 
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={applyAll} style={{ padding: '10px 12px', borderRadius: 10, border: 'none', background: PALETTE.primary, color: '#fff', cursor: 'pointer' }}>Aplicar todos</button>
+              <button onClick={applyAll} disabled={saving} style={{ padding: '10px 12px', borderRadius: 10, border: 'none', background: PALETTE.primary, color: '#fff', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1 }}>{saving ? 'Guardando...' : 'Aplicar todos'}</button>
             </div>
           </div>
 
           <div style={{ background: PALETTE.white, borderRadius: 12, padding: 14, border: `1px solid ${PALETTE.light}`, boxShadow: '0 12px 30px rgba(43,103,119,0.04)' }}>
+            {loading ? (
+              <div style={{ textAlign: 'center', padding: '40px 20px', color: PALETTE.primary }}>
+                <div style={{ marginBottom: 12 }}>Cargando usuarios...</div>
+              </div>
+            ) : usuarios.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px 20px', color: '#667' }}>
+                No hay usuarios disponibles
+              </div>
+            ) : (
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ textAlign: 'left', color: '#334' }}>
@@ -120,7 +212,7 @@ export default function EditRoles({ user = { name: 'Empresa - Usuario' }, onCanc
 
                       <td style={{ padding: '10px 8px', width: 180 }}>
                         <div style={{ display: 'flex', gap: 8 }}>
-                          <button onClick={() => applyChanges(u.id_usuario)} style={{ padding: '8px 10px', borderRadius: 8, border: 'none', background: PALETTE.primary, color: '#fff', cursor: 'pointer' }}>Guardar</button>
+                          <button onClick={() => applyChanges(u.id_usuario)} disabled={saving} style={{ padding: '8px 10px', borderRadius: 8, border: 'none', background: PALETTE.primary, color: '#fff', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1 }}>{saving ? 'Guardando...' : 'Guardar'}</button>
                           <button onClick={() => { const next = { ...editBuffer }; delete next[u.id_usuario]; setEditBuffer(next); }} style={{ padding: '8px 10px', borderRadius: 8, border: `1px solid ${PALETTE.light}`, background: 'transparent', cursor: 'pointer' }}>Revertir</button>
                         </div>
                       </td>
@@ -129,6 +221,7 @@ export default function EditRoles({ user = { name: 'Empresa - Usuario' }, onCanc
                 })}
               </tbody>
             </table>
+            )}
           </div>
 
         </div>
