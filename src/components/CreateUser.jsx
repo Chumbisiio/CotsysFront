@@ -273,10 +273,9 @@ export default function CreateUser({ user = { name: 'Usuario' }, onCancel, onLog
                   <label style={{ fontSize: 13, marginBottom: 6 }}>Rol</label>
                   <select name="rol" value={form.rol} onChange={handleChange} required style={selectStyle()}>
                     <option value="">Seleccionar rol</option>
-                    <option value="Administrador">Administrador</option>
-                    <option value="Comercial">Usuario Comercial</option>
-                    <option value="Técnico">Líder Tecnico</option>
-                    <option value="Gerente">Gerente</option>
+                    <option value="ADMINISTRADOR">Administrador</option>
+                    <option value="COMERCIAL">Usuario Comercial</option>
+                    <option value="LIDER_TECNICO">Líder Técnico</option>
                   </select>
                 </div>
 

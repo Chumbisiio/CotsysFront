@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { login } from '../api/auth';
-import { setTokens } from '../auth/tokenStore';
+import { setTokens, getSessionUser } from '../auth/tokenStore';
 
 const PALETTE = {
   primary: '#2b6777',
@@ -32,9 +32,10 @@ export default function Login({ onLogin }) {
     try {
       const tokens = await login({ email, password });
       setTokens(tokens.access_token, tokens.refresh_token);
+      const sessionUser = getSessionUser();
       // Notificar al parent para cambiar la vista sin recargar.
       if (typeof onLogin === 'function') {
-        onLogin();
+        onLogin(sessionUser);
       } else {
         // Fallback: recarga (mantendrá login porque App.jsx inicia en 'login').
         window.location.href = '/';

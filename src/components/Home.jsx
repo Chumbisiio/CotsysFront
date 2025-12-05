@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { clearTokens } from '../auth/tokenStore';
 import { logout } from '../api/auth';
 
+
 const PALETTE_HOME = {
   primary: '#2b6777',
   light: '#c8d8e4',
@@ -41,12 +42,12 @@ const IconProduct = ({ size = 42 }) => (
   </svg>
 );
 
-export default function Home({ user = { name: 'Usuario' }, onLogout, onNavigate }) {
+export default function Home({ user = { name: 'Usuario', role: null }, allowedViews = new Set(), onLogout, onNavigate }) {
   const cards = [
-    { id: 1, title: 'Crear cotización', color: PALETTE_HOME.primary, icon: <IconPlus /> },
-    { id: 2, title: 'Administrar productos y kits', color: PALETTE_HOME.primary, icon: <IconProduct /> },
-    { id: 3, title: 'Administrar usuarios/clientes', color: PALETTE_HOME.primary, icon: <IconUser /> },
-    { id: 4, title: 'Editar roles', color: PALETTE_HOME.primary, icon: <IconBox /> }
+    { id: 1, title: 'Crear cotización', color: PALETTE_HOME.primary, icon: <IconPlus />, view: 'cotizacion' },
+    { id: 2, title: 'Administrar productos y kits', color: PALETTE_HOME.primary, icon: <IconProduct />, view: 'manageProducts' },
+    { id: 3, title: 'Administrar usuarios/clientes', color: PALETTE_HOME.primary, icon: <IconUser />, view: 'createUser' },
+    { id: 4, title: 'Editar roles', color: PALETTE_HOME.primary, icon: <IconBox />, view: 'editRoles' }
   ];
 
   const [hovered, setHovered] = useState(null);
@@ -66,8 +67,7 @@ export default function Home({ user = { name: 'Usuario' }, onLogout, onNavigate 
   };
 
   const handleNavigate = (target) => {
-    // pequeña animación de salida (CSS handle by new view anim)
-    if (onNavigate) onNavigate(target);
+    if (allowedViews.has(target) && onNavigate) onNavigate(target);
   };
 
   return (
@@ -96,7 +96,10 @@ export default function Home({ user = { name: 'Usuario' }, onLogout, onNavigate 
             <div style={{ width: 36, height: 36, borderRadius: 18, background: PALETTE_HOME.gray, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <IconUser size={18} />
             </div>
-            <div style={{ fontSize: 14 }}>{user.name}</div>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <div style={{ fontSize: 14 }}>{user?.name || 'Usuario'}</div>
+              {user?.role && <div style={{ fontSize: 12, color: '#567' }}>{user.role}</div>}
+            </div>
           </div>
 
           <button onClick={confirmLogout} style={{
@@ -121,17 +124,12 @@ export default function Home({ user = { name: 'Usuario' }, onLogout, onNavigate 
             <p style={{ marginTop: 8, color: '#445', opacity: 0.9 }}>¿Qué desea realizar hoy?</p>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 20 }}>
-            {cards.map(card => (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' , justifyContent: 'center', alignItems: 'center', gap: 20 }}>
+            {cards.filter(c => allowedViews.has(c.view)).map(card => (
               <div
                 key={card.id}
-                role={(card.id === 2 || card.id === 3) ? 'button' : undefined}
-                onClick={() => {
-                  if (card.id === 1) handleNavigate('cotizacion');
-                  if (card.id === 3) handleNavigate('createUser');
-                  if (card.id === 2) handleNavigate('manageProducts');
-                  if (card.id === 4) handleNavigate('editRoles');
-                }}
+                role="button"
+                onClick={() => handleNavigate(card.view)}
                 onMouseEnter={() => setHovered(card.id)}
                 onMouseLeave={() => setHovered(null)}
                 style={{

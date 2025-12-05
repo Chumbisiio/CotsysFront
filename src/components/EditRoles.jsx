@@ -22,7 +22,7 @@ const IconUser = ({ size = 16 }) => (
   </svg>
 );
 
-const rolesDisponibles = ['Administrador', 'Comercial', 'Gerente', 'Técnico'];
+const rolesDisponibles = ['ADMINISTRADOR', 'COMERCIAL', 'LIDER_TECNICO'];
 
 export default function EditRoles({ user = { name: 'Empresa - Usuario' }, onCancel, onLogout = () => {} }) {
   const [usuarios, setUsuarios] = useState([]);
