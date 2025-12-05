@@ -45,7 +45,7 @@ const IconProduct = ({ size = 42 }) => (
 export default function Home({ user = { name: 'Usuario', role: null }, allowedViews = new Set(), onLogout, onNavigate }) {
   const cards = [
     { id: 1, title: 'Crear cotización', color: PALETTE_HOME.primary, icon: <IconPlus />, view: 'cotizacion' },
-    { id: 2, title: 'Administrar productos y kits', color: PALETTE_HOME.primary, icon: <IconProduct />, view: 'manageProducts' },
+    { id: 2, title: 'Administrar productos/kits', color: PALETTE_HOME.primary, icon: <IconProduct />, view: 'manageProducts' },
     { id: 3, title: 'Administrar usuarios/clientes', color: PALETTE_HOME.primary, icon: <IconUser />, view: 'createUser' },
     { id: 4, title: 'Editar roles', color: PALETTE_HOME.primary, icon: <IconBox />, view: 'editRoles' }
   ];
