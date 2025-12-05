@@ -33,11 +33,9 @@ export default function Login({ onLogin }) {
       const tokens = await login({ email, password });
       setTokens(tokens.access_token, tokens.refresh_token);
       const sessionUser = getSessionUser();
-      // Notificar al parent para cambiar la vista sin recargar.
       if (typeof onLogin === 'function') {
         onLogin(sessionUser);
       } else {
-        // Fallback: recarga (mantendrá login porque App.jsx inicia en 'login').
         window.location.href = '/';
       }
     } catch (err) {
@@ -164,7 +162,6 @@ export default function Login({ onLogin }) {
             >
               {loading ? 'Ingresando...' : 'Iniciar sesión'}
             </button>
-            {error && <p style={{ color: 'red' }}>{error}</p>}
 
           </form>
         </section>

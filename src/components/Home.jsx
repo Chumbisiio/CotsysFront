@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { clearTokens } from '../auth/tokenStore';
 import { logout } from '../api/auth';
 
-
 const PALETTE_HOME = {
   primary: '#2b6777',
   light: '#c8d8e4',
@@ -58,7 +57,6 @@ export default function Home({ user = { name: 'Usuario', role: null }, allowedVi
     try {
       await logout();
     } catch (e) {
-      // ignorar errores de red para no bloquear el flujo
       console.error('Logout error', e);
     } finally {
       clearTokens();

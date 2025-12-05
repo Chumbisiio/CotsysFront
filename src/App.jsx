@@ -12,28 +12,29 @@ export default function App() {
   const [view, setView] = useState(initialView);
   const [user, setUser] = useState(() => getSessionUser());
 
+  useEffect(() => {
+    const sessionUser = getSessionUser();
+    if (sessionUser.role !== user?.role || sessionUser.email !== user?.email || sessionUser.name !== user?.name) {
+      setUser(sessionUser);
+    }
+  }, []);
+
   const allowedViews = useMemo(() => {
-    const normalizedRole = (user?.role || '').toUpperCase().replace(/\s+/g, '_');
-      if (normalizedRole === 'ADMINISTRADOR') 
-      if (normalizedRole === 'COMERCIAL') { base.add('cotizacion'); }
-      if (normalizedRole === 'LIDER_TECNICO') { base.add('manageProducts'); }
-      
     const role = user?.role || '';
     const base = new Set(['home']);
+    
     if (role === 'ADMINISTRADOR') {
       ['createUser', 'manageProducts', 'cotizacion', 'editRoles'].forEach(v => base.add(v));
-    }
-    if (role === 'COMERCIAL') {
+    } else if (role === 'COMERCIAL') {
       base.add('cotizacion');
-    }
-    if (role  === 'LIDER_TECNICO') {
+    } else if (role === 'TÉCNICO') {
       base.add('manageProducts');
     }
+    
     return base;
   }, [user]);
 
   useEffect(() => {
-    // Si cambia el usuario/rol y la vista actual no está permitida, regresar a home.
     if (!allowedViews.has(view) && view !== 'login') {
       setView('home');
     }
@@ -54,9 +55,11 @@ export default function App() {
   };
 
   const handleLoginSuccess = () => {
-    const sessionUser = getSessionUser();
-    setUser(sessionUser);
-    setView('home');
+    setTimeout(() => {
+      const sessionUser = getSessionUser();
+      setUser(sessionUser);
+      setView('home');
+    }, 100);
   };
 
   return (
@@ -84,7 +87,6 @@ export default function App() {
           onLogout={handleLogout}
         />
       )}
-
       {view === 'cotizacion' && (
         <Cotizacion
           user={user}
@@ -92,7 +94,6 @@ export default function App() {
           onLogout={handleLogout}
         />
       )}
-
       {view === 'editRoles' && (
         <EditRoles
           user={user}

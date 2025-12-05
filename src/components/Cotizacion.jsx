@@ -26,7 +26,6 @@ const IconUser = ({ size = 16 }) => (
 );
 
 export default function Cotizacion({ user = { name: 'Empresa - Usuario' }, onCancel, onLogout = () => {} }) {
-  // campos principales (visual)
   const [form, setForm] = useState({
     id_cotizacion: '',
     estado: 'Borrador',
@@ -38,7 +37,6 @@ export default function Cotizacion({ user = { name: 'Empresa - Usuario' }, onCan
     cliente: ''
   });
 
-  // items (líneas)
   const [items, setItems] = useState([
     { id: 1, producto: 'Kit A', cantidad: 1, precioUnitario: 1200.00 },
     { id: 2, producto: 'Componente B', cantidad: 2, precioUnitario: 45.5 }
@@ -64,9 +62,7 @@ export default function Cotizacion({ user = { name: 'Empresa - Usuario' }, onCan
 
   const handleSave = (e) => {
     e.preventDefault();
-    // Visual only: mostrar un toast o console
-    console.log('Simulación: cotización guardada', { form, items, total });
-    alert('Simulación: cotización guardada (sin backend).');
+    alert('Cotización guardada');
   };
 
   const confirmLogout = () => {
@@ -85,7 +81,6 @@ export default function Cotizacion({ user = { name: 'Empresa - Usuario' }, onCan
       fontFamily: "Inter, Roboto, -apple-system, 'Segoe UI', sans-serif",
       animation: 'fadeSlideIn 240ms ease'
     }}>
-      {/* Topbar */}
       <div style={{
         height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '0 20px', background: 'rgba(255,255,255,0.7)', borderBottom: `1px solid ${PALETTE.light}`

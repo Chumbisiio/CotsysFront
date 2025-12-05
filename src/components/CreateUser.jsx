@@ -49,13 +49,11 @@ export default function CreateUser({ user = { name: 'Usuario' }, onCancel, onLog
     municipio: '',
     tipo_regimen: ''
   });
-  const [clients, setClients] = useState([
-    { id_cliente: 1, nombre: 'Cliente Demo', nit: '123456789-0', direccion: 'Calle 1 #2-3', tipoRegimen: 'Común', autorrentenedor: false, municipio: 'Bogotá', tipo_regimen: 'Común' }
-  ]);
+  const [clients, setClients] = useState([]);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [showToast, setShowToast] = useState(false);
-  const [section, setSection] = useState('usuarios'); // usuarios | clientes
+  const [section, setSection] = useState('usuarios');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -76,12 +74,10 @@ export default function CreateUser({ user = { name: 'Usuario' }, onCancel, onLog
       const data = err?.response?.data;
       let base = typeof data === 'string' ? data : (data?.message || data?.error || data?.detail);
       let msg = base || err.message || 'Error al crear usuario';
-      // Duplicado de email detectado por status o por mensaje
       if (status === 403 || /registrad|duplicad/i.test(msg)) {
         msg = 'El email ya está registrado';
       }
       setError(msg);
-      console.error('[CreateUser] Error creación:', err);
     } finally {
       setLoading(false);
     }
@@ -273,9 +269,9 @@ export default function CreateUser({ user = { name: 'Usuario' }, onCancel, onLog
                   <label style={{ fontSize: 13, marginBottom: 6 }}>Rol</label>
                   <select name="rol" value={form.rol} onChange={handleChange} required style={selectStyle()}>
                     <option value="">Seleccionar rol</option>
-                    <option value="ADMINISTRADOR">Administrador</option>
-                    <option value="COMERCIAL">Usuario Comercial</option>
-                    <option value="LIDER_TECNICO">Líder Técnico</option>
+                    <option value="Administrador">Administrador</option>
+                    <option value="Comercial">Usuario Comercial</option>
+                    <option value="Técnico">Técnico</option>
                   </select>
                 </div>
 

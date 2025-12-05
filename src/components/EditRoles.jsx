@@ -22,13 +22,13 @@ const IconUser = ({ size = 16 }) => (
   </svg>
 );
 
-const rolesDisponibles = ['ADMINISTRADOR', 'COMERCIAL', 'LIDER_TECNICO'];
+const rolesDisponibles = ['Administrador', 'Comercial', 'Técnico'];
 
 export default function EditRoles({ user = { name: 'Empresa - Usuario' }, onCancel, onLogout = () => {} }) {
   const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [editBuffer, setEditBuffer] = useState({}); // cambios temporales por usuario
+  const [editBuffer, setEditBuffer] = useState({});
   const [showToast, setShowToast] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -38,7 +38,6 @@ export default function EditRoles({ user = { name: 'Empresa - Usuario' }, onCanc
       setError(null);
       try {
         const data = await getUsuarios();
-        // Normaliza las claves desde el backend al formato esperado por la tabla
         const normalized = (Array.isArray(data) ? data : []).map(u => ({
           id_usuario: u.id_usuario ?? u.id ?? u.userId ?? u.codigo ?? null,
           nombre: u.nombre ?? u.name ?? u.fullName ?? '',
@@ -50,7 +49,6 @@ export default function EditRoles({ user = { name: 'Empresa - Usuario' }, onCanc
       } catch (err) {
         const msg = err?.response?.data?.message || err.message || 'Error al cargar usuarios';
         setError(msg);
-        console.error('[EditRoles] Error cargando usuarios:', err);
       } finally {
         setLoading(false);
       }
@@ -80,8 +78,6 @@ export default function EditRoles({ user = { name: 'Empresa - Usuario' }, onCanc
       }];
       
       await updateUsuarios(payload);
-      
-      // Su hay éxito se actualizar UI
       setUsuarios(prev => prev.map(u => u.id_usuario === id ? { ...u, ...changed } : u));
       const next = { ...editBuffer };
       delete next[id];
@@ -91,7 +87,6 @@ export default function EditRoles({ user = { name: 'Empresa - Usuario' }, onCanc
     } catch (err) {
       const msg = err?.response?.data?.message || err.message || 'Error al guardar cambios';
       setError(msg);
-      console.error('[EditRoles] Error guardando cambios:', err);
     } finally {
       setSaving(false);
     }
@@ -103,7 +98,6 @@ export default function EditRoles({ user = { name: 'Empresa - Usuario' }, onCanc
     setSaving(true);
     setError(null);
     try {
-      // Preparar payload: lista de todos los usuarios con cambios
       const payload = Object.values(editBuffer).map(u => ({
         email: u.email,
         rol: u.rol,
@@ -111,8 +105,6 @@ export default function EditRoles({ user = { name: 'Empresa - Usuario' }, onCanc
       }));
       
       await updateUsuarios(payload);
-      
-      // Éxito: actualizar UI
       const updated = usuarios.map(u => 
         editBuffer[u.id_usuario] ? { ...u, ...editBuffer[u.id_usuario] } : u
       );
@@ -123,7 +115,6 @@ export default function EditRoles({ user = { name: 'Empresa - Usuario' }, onCanc
     } catch (err) {
       const msg = err?.response?.data?.message || err.message || 'Error al guardar cambios';
       setError(msg);
-      console.error('[EditRoles] Error guardando todos los cambios:', err);
     } finally {
       setSaving(false);
     }
@@ -138,7 +129,6 @@ export default function EditRoles({ user = { name: 'Empresa - Usuario' }, onCanc
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: `linear-gradient(180deg, ${PALETTE.light}, ${PALETTE.gray})`, boxSizing: 'border-box', fontFamily: "Inter, Roboto, -apple-system, 'Segoe UI', sans-serif", animation: 'fadeSlideIn 240ms ease' }}>
 
-      {/* Topbar */}
       <div style={{ height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', background: 'rgba(255,255,255,0.7)', borderBottom: `1px solid ${PALETTE.light}` }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <button onClick={onCancel} style={{ background: PALETTE.primary, color: '#fff', border: 'none', padding: '8px 12px', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, boxShadow: '0 6px 14px rgba(43,103,119,0.18)' }}>
@@ -157,11 +147,8 @@ export default function EditRoles({ user = { name: 'Empresa - Usuario' }, onCanc
         </div>
       </div>
 
-      {/* Contenido principal */}
       <div style={{ flex: 1, padding: 20 }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-
-          {/* Banner de error */}
           {error && (
             <div role="alert" style={{
               margin: '0 0 12px 0',
@@ -251,14 +238,12 @@ export default function EditRoles({ user = { name: 'Empresa - Usuario' }, onCanc
         </div>
       </div>
 
-      {/* Footer */}
       <div style={{ height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center', borderTop: `1px solid ${PALETTE.light}`, background: 'rgba(255,255,255,0.6)' }}>
         <div style={{ color: PALETTE.primary, fontWeight: 600 }}>J^3</div>
       </div>
 
-      {/* Toast */}
       {showToast && (
-        <div style={{ position: 'fixed', right: 20, bottom: 80, background: PALETTE.primary, color: '#fff', padding: '10px 14px', borderRadius: 10, boxShadow: '0 8px 20px rgba(0,0,0,0.16)' }}>Cambios aplicados (simulación)</div>
+        <div style={{ position: 'fixed', right: 20, bottom: 80, background: PALETTE.primary, color: '#fff', padding: '10px 14px', borderRadius: 10, boxShadow: '0 8px 20px rgba(0,0,0,0.16)' }}>Cambios aplicados</div>
       )}
 
     </div>
