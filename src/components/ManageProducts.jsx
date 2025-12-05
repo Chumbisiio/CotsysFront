@@ -29,9 +29,9 @@ const IconUser = ({ size = 16 }) => (
 
 export default function ManageProducts({ user = { name: 'Usuario' }, onCancel, onLogout = () => {} }) {
   const [products, setProducts] = useState([
-    { id_producto: 1, nombre: 'Kit A', descripcion: 'Kit básico', categoria: 'Soluciones', unidadMedida: 'unidad', costoBase: 1200.00, monedaOriginal: 'COP', tipo: 'kit', estado: true, cantidadKit: 1, instruccionesKit: 'Usar con cuidado', kitSolucion: 1001 },
-    { id_producto: 2, nombre: 'Producto B', descripcion: 'Componente B', categoria: 'Componentes', unidadMedida: 'kg', costoBase: 45.50, monedaOriginal: 'USD', tipo: 'componente', estado: true, cantidadKit: 0, instruccionesKit: '', kitSolucion: 0 },
-    { id_producto: 3, nombre: 'Producto C', descripcion: 'Componente C', categoria: 'Componentes', unidadMedida: 'unidad', costoBase: 30.00, monedaOriginal: 'USD', tipo: 'componente', estado: true, cantidadKit: 0, instruccionesKit: '', kitSolucion: 0 }
+    { id_producto: 1, nombre: 'Producto A', descripcion: 'Componente A', categoria: 'Soluciones', unidadMedida: 'unidad', costoBase: 1200.00, monedaOriginal: 'COP', tipo: 'Producto', estado: true, cantidadKit: 1, instruccionesKit: 'Usar con cuidado', kitSolucion: 1001 },
+    { id_producto: 2, nombre: 'Producto B', descripcion: 'Componente B', categoria: 'Construcción', unidadMedida: 'kg', costoBase: 45.50, monedaOriginal: 'USD', tipo: 'Servicio', estado: true, cantidadKit: 0, instruccionesKit: '', kitSolucion: 0 },
+    { id_producto: 3, nombre: 'Producto C', descripcion: 'Componente C', categoria: 'Administración', unidadMedida: 'unidad', costoBase: 30.00, monedaOriginal: 'USD', tipo: 'Producto', estado: true, cantidadKit: 0, instruccionesKit: '', kitSolucion: 0 }
   ]);
 
   const [kits, setKits] = useState([
@@ -315,21 +315,6 @@ export default function ManageProducts({ user = { name: 'Usuario' }, onCancel, o
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <input id="estado" name="estado" type="checkbox" checked={productForm.estado} onChange={handleProductChange} />
                 <label htmlFor="estado">Activo</label>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <label>Cantidad kit</label>
-                <input name="cantidadKit" value={productForm.cantidadKit} onChange={handleProductChange} type="number" style={inputStyle()} />
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <label>Instrucciones kit</label>
-                <input name="instruccionesKit" value={productForm.instruccionesKit} onChange={handleProductChange} style={inputStyle()} />
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <label>Kit solución (ID)</label>
-                <input name="kitSolucion" value={productForm.kitSolucion} onChange={handleProductChange} style={inputStyle()} />
               </div>
 
               <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 8 }}>
