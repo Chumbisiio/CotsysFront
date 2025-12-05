@@ -44,12 +44,31 @@ const IconProduct = ({ size = 42 }) => (
 export default function Home({ user = { name: 'Usuario' }, onLogout, onNavigate }) {
   const cards = [
     { id: 1, title: 'Crear cotización', color: PALETTE_HOME.primary, icon: <IconPlus /> },
-    { id: 2, title: 'Administrar productos', color: PALETTE_HOME.primary, icon: <IconProduct /> },
-    { id: 3, title: 'Crear usuarios', color: PALETTE_HOME.primary, icon: <IconUser /> },
+    { id: 2, title: 'Administrar productos y kits', color: PALETTE_HOME.primary, icon: <IconProduct /> },
+    { id: 3, title: 'Administrar usuarios/clientes', color: PALETTE_HOME.primary, icon: <IconUser /> },
     { id: 4, title: 'Editar roles', color: PALETTE_HOME.primary, icon: <IconBox /> }
   ];
 
   const [hovered, setHovered] = useState(null);
+
+  const confirmLogout = async () => {
+    const ok = window.confirm('¿Deseas cerrar sesión?');
+    if (!ok) return;
+    try {
+      await logout();
+    } catch (e) {
+      // ignorar errores de red para no bloquear el flujo
+      console.error('Logout error', e);
+    } finally {
+      clearTokens();
+      if (typeof onLogout === 'function') onLogout();
+    }
+  };
+
+  const handleNavigate = (target) => {
+    // pequeña animación de salida (CSS handle by new view anim)
+    if (onNavigate) onNavigate(target);
+  };
 
   return (
     <div style={{
@@ -58,7 +77,8 @@ export default function Home({ user = { name: 'Usuario' }, onLogout, onNavigate 
       flexDirection: 'column',
       background: `linear-gradient(180deg, ${PALETTE_HOME.light}, ${PALETTE_HOME.gray})`,
       fontFamily: "Inter, Roboto, -apple-system, 'Segoe UI', sans-serif",
-      boxSizing: 'border-box'
+      boxSizing: 'border-box',
+      animation: 'fadeSlideIn 240ms ease'
     }}>
 
       <div style={{
@@ -79,16 +99,14 @@ export default function Home({ user = { name: 'Usuario' }, onLogout, onNavigate 
             <div style={{ fontSize: 14 }}>{user.name}</div>
           </div>
 
-          <button onClick={async () => {
-            await logout();
-            clearTokens();
-            if (typeof onLogout === 'function') onLogout();
-          }} style={{
-            background: 'transparent',
-            border: '1px solid rgba(0,0,0,0.06)',
-            padding: '8px 10px',
+          <button onClick={confirmLogout} style={{
+            background: PALETTE_HOME.primary,
+            color: '#fff',
+            border: 'none',
+            padding: '8px 12px',
             borderRadius: 8,
-            cursor: 'pointer'
+            cursor: 'pointer',
+            boxShadow: '0 6px 14px rgba(43,103,119,0.18)'
           }}>
             Cerrar sesión
           </button>
@@ -109,10 +127,10 @@ export default function Home({ user = { name: 'Usuario' }, onLogout, onNavigate 
                 key={card.id}
                 role={(card.id === 2 || card.id === 3) ? 'button' : undefined}
                 onClick={() => {
-                  if (card.id === 1 && onNavigate) onNavigate('cotizacion');
-                  if (card.id === 3 && onNavigate) onNavigate('createUser');
-                  if (card.id === 2 && onNavigate) onNavigate('manageProducts');
-                  if (card.id === 4 && onNavigate) onNavigate('editRoles');
+                  if (card.id === 1) handleNavigate('cotizacion');
+                  if (card.id === 3) handleNavigate('createUser');
+                  if (card.id === 2) handleNavigate('manageProducts');
+                  if (card.id === 4) handleNavigate('editRoles');
                 }}
                 onMouseEnter={() => setHovered(card.id)}
                 onMouseLeave={() => setHovered(null)}

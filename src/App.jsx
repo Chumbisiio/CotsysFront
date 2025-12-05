@@ -12,29 +12,51 @@ export default function App() {
   const [view, setView] = useState(initialView);
   const fakeUser = { name: 'Empresa - Usuario' };
 
+  const handleLogout = () => {
+    clearTokens();
+    setView('login');
+  };
+
   return (
     <>
       {view === 'login' && <Login onLogin={() => setView('home')} />}
       {view === 'home' && (
         <Home
           user={fakeUser}
-          onLogout={() => {
-            clearTokens();
-            setView('login');
-          }}
+          onLogout={handleLogout}
           onNavigate={(v) => setView(v)}
         />
       )}
       {view === 'createUser' && (
-        <CreateUser user={fakeUser} onCancel={() => setView('home')} />
+        <CreateUser
+          user={fakeUser}
+          onCancel={() => setView('home')}
+          onLogout={handleLogout}
+        />
       )}
       {view === 'manageProducts' && (
-        <ManageProducts user={fakeUser} onCancel={() => setView('home')} />
+        <ManageProducts
+          user={fakeUser}
+          onCancel={() => setView('home')}
+          onLogout={handleLogout}
+        />
       )}
 
-{view === 'cotizacion' && <Cotizacion user={fakeUser} onCancel={() => setView('home')} />}
+      {view === 'cotizacion' && (
+        <Cotizacion
+          user={fakeUser}
+          onCancel={() => setView('home')}
+          onLogout={handleLogout}
+        />
+      )}
 
-{view === 'editRoles' && <EditRoles user={fakeUser} onCancel={() => setView('home')} />}
+      {view === 'editRoles' && (
+        <EditRoles
+          user={fakeUser}
+          onCancel={() => setView('home')}
+          onLogout={handleLogout}
+        />
+      )}
     </>
   );
 }

@@ -16,7 +16,21 @@ const IconUser = ({ size = 18 }) => (
   </svg>
 );
 
-export default function CreateUser({ user = { name: 'Usuario' }, onCancel }) {
+const IconClient = ({ size = 18 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+    <path d="M4 7h16v10H4V7z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+    <path d="M8 11h8M8 14h5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    <path d="M7 4h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+  </svg>
+);
+
+const IconBack = ({ size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M15 6l-6 6 6 6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+export default function CreateUser({ user = { name: 'Usuario' }, onCancel, onLogout = () => {} }) {
   const [form, setForm] = useState({
     id_usuario: '',
     nombre: '',
@@ -25,9 +39,23 @@ export default function CreateUser({ user = { name: 'Usuario' }, onCancel }) {
     password: '',
     activo: true
   });
+  const [clientForm, setClientForm] = useState({
+    id_cliente: '',
+    nombre: '',
+    nit: '',
+    direccion: '',
+    tipoRegimen: '',
+    autorrentenedor: false,
+    municipio: '',
+    tipo_regimen: ''
+  });
+  const [clients, setClients] = useState([
+    { id_cliente: 1, nombre: 'Cliente Demo', nit: '123456789-0', direccion: 'Calle 1 #2-3', tipoRegimen: 'Común', autorrentenedor: false, municipio: 'Bogotá', tipo_regimen: 'Común' }
+  ]);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [showToast, setShowToast] = useState(false);
+  const [section, setSection] = useState('usuarios'); // usuarios | clientes
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -64,6 +92,36 @@ export default function CreateUser({ user = { name: 'Usuario' }, onCancel }) {
     setForm(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
   };
 
+  const handleClientChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setClientForm(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+  };
+
+  const handleClientSubmit = (e) => {
+    e.preventDefault();
+    if (!clientForm.nombre || !clientForm.nit) {
+      setError('Completa al menos nombre y NIT del cliente.');
+      return;
+    }
+    const newId = clients.length ? Math.max(...clients.map(c => c.id_cliente || 0)) + 1 : 1;
+    const next = { ...clientForm, id_cliente: clientForm.id_cliente || newId };
+    setClients(prev => {
+      const exists = prev.some(c => c.id_cliente === next.id_cliente);
+      if (exists) return prev.map(c => c.id_cliente === next.id_cliente ? next : c);
+      return [...prev, next];
+    });
+    setClientForm({ id_cliente: '', nombre: '', nit: '', direccion: '', tipoRegimen: '', autorrentenedor: false, municipio: '', tipo_regimen: '' });
+    setError(null);
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 2000);
+  };
+
+  const confirmLogout = () => {
+    const ok = window.confirm('¿Deseas cerrar sesión?');
+    if (!ok) return;
+    onLogout();
+  };
+
   return (
     <div style={{
       minHeight: '100vh',
@@ -71,7 +129,8 @@ export default function CreateUser({ user = { name: 'Usuario' }, onCancel }) {
       flexDirection: 'column',
       background: `linear-gradient(180deg, ${PALETTE.light}, ${PALETTE.gray})`,
       fontFamily: "Inter, Roboto, -apple-system, 'Segoe UI', sans-serif",
-      boxSizing: 'border-box'
+      boxSizing: 'border-box',
+      animation: 'fadeSlideIn 240ms ease'
     }}>
 
       <div style={{
@@ -83,7 +142,23 @@ export default function CreateUser({ user = { name: 'Usuario' }, onCancel }) {
         background: 'rgba(255,255,255,0.7)',
         borderBottom: `1px solid ${PALETTE.light}`
       }}>
-        <div style={{ fontWeight: 700, color: PALETTE.primary }}>CotSys</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button onClick={onCancel} style={{
+            background: PALETTE.primary,
+            color: '#fff',
+            border: 'none',
+            padding: '8px 12px',
+            borderRadius: 8,
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            boxShadow: '0 6px 14px rgba(43,103,119,0.18)'
+          }}>
+            <IconBack /> Volver
+          </button>
+          <div style={{ fontWeight: 700, color: PALETTE.primary }}>CotSys</div>
+        </div>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#2b2b2b' }}>
             <div style={{
@@ -96,14 +171,16 @@ export default function CreateUser({ user = { name: 'Usuario' }, onCancel }) {
             <div style={{ fontSize: 14 }}>{user.name}</div>
           </div>
 
-          <button onClick={onCancel} style={{
-            background: 'transparent',
-            border: '1px solid rgba(0,0,0,0.06)',
-            padding: '8px 10px',
+          <button onClick={confirmLogout} style={{
+            background: PALETTE.primary,
+            color: '#fff',
+            border: 'none',
+            padding: '8px 12px',
             borderRadius: 8,
-            cursor: 'pointer'
+            cursor: 'pointer',
+            boxShadow: '0 6px 14px rgba(43,103,119,0.18)'
           }}>
-            Volver
+            Cerrar sesión
           </button>
         </div>
       </div>
@@ -111,9 +188,50 @@ export default function CreateUser({ user = { name: 'Usuario' }, onCancel }) {
       <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: 28 }}>
         <div style={{ maxWidth: 900, width: '100%' }}>
 
-          <div style={{ textAlign: 'center', marginBottom: 18 }}>
-            <h2 style={{ margin: 0, color: PALETTE.primary, fontSize: 26 }}>Crear usuario</h2>
-            <p style={{ marginTop: 8, color: '#445', opacity: 0.9 }}>Rellena los datos del nuevo usuario.</p>
+        <div style={{ textAlign: 'center', marginBottom: 18 }}>
+            <h2 style={{ margin: 0, color: PALETTE.primary, fontSize: 26 }}>Administrar usuarios/clientes</h2>
+            <p style={{ marginTop: 8, color: '#445', opacity: 0.9 }}>Selecciona la opción para gestionar usuarios o clientes.</p>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginBottom: 16 }}>
+            <button
+              type="button"
+              onClick={() => setSection('usuarios')}
+              style={{
+                minWidth: 180,
+                padding: 14,
+                borderRadius: 12,
+                border: section === 'usuarios' ? '2px solid #2b6777' : `1px solid ${PALETTE.light}`,
+                background: section === 'usuarios' ? PALETTE.primary : '#fff',
+                color: section === 'usuarios' ? '#fff' : '#234',
+                display: 'flex',
+                gap: 10,
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                boxShadow: section === 'usuarios' ? '0 10px 24px rgba(43,103,119,0.18)' : '0 8px 20px rgba(0,0,0,0.06)'
+              }}>
+              <IconUser size={18} /> Usuarios
+            </button>
+            <button
+              type="button"
+              onClick={() => setSection('clientes')}
+              style={{
+                minWidth: 180,
+                padding: 14,
+                borderRadius: 12,
+                border: section === 'clientes' ? '2px solid #2b6777' : `1px solid ${PALETTE.light}`,
+                background: section === 'clientes' ? PALETTE.primary : '#fff',
+                color: section === 'clientes' ? '#fff' : '#234',
+                display: 'flex',
+                gap: 10,
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                boxShadow: section === 'clientes' ? '0 10px 24px rgba(43,103,119,0.18)' : '0 8px 20px rgba(0,0,0,0.06)'
+              }}>
+              <IconClient size={18} /> Clientes
+            </button>
           </div>
 
           {error && (
@@ -130,72 +248,185 @@ export default function CreateUser({ user = { name: 'Usuario' }, onCancel }) {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} style={{
-            background: PALETTE.white,
-            padding: 20,
-            borderRadius: 12,
-            boxShadow: '0 12px 30px rgba(43,103,119,0.08)',
-            border: `1px solid ${PALETTE.light}`
-          }}>
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: 14,
-              alignItems: 'center'
+          {section === 'usuarios' && (
+            <form onSubmit={handleSubmit} style={{
+              background: PALETTE.white,
+              padding: 20,
+              borderRadius: 12,
+              boxShadow: '0 12px 30px rgba(43,103,119,0.08)',
+              border: `1px solid ${PALETTE.light}`,
+              animation: 'fadeSlideIn 180ms ease'
             }}>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: 14,
+                alignItems: 'center'
+              }}>
 
-              <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column' }}>
-                <label style={{ fontSize: 13, marginBottom: 6 }}>Nombre</label>
-                <input name="nombre" value={form.nombre} onChange={handleChange} placeholder="Nombre completo" required style={inputStyle()}/>
+                <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column' }}>
+                  <label style={{ fontSize: 13, marginBottom: 6 }}>Nombre</label>
+                  <input name="nombre" value={form.nombre} onChange={handleChange} placeholder="Nombre completo" required style={inputStyle()}/>
+                </div>
+
+                <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column' }}>
+                  <label style={{ fontSize: 13, marginBottom: 6 }}>Rol</label>
+                  <select name="rol" value={form.rol} onChange={handleChange} required style={selectStyle()}>
+                    <option value="">Seleccionar rol</option>
+                    <option value="Administrador">Administrador</option>
+                    <option value="Comercial">Usuario Comercial</option>
+                    <option value="Técnico">Líder Tecnico</option>
+                    <option value="Gerente">Gerente</option>
+                  </select>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <label style={{ fontSize: 13, marginBottom: 6 }}>Email</label>
+                  <input name="email" value={form.email} onChange={handleChange} placeholder="correo@inst.com" required style={inputStyle()}/>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <label style={{ fontSize: 13, marginBottom: 6 }}>Contraseña</label>
+                  <input name="password" value={form.password} onChange={handleChange} placeholder="********" type="password" required style={inputStyle()}/>
+                </div>
               </div>
 
-              <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column' }}>
-                <label style={{ fontSize: 13, marginBottom: 6 }}>Rol</label>
-                <select name="rol" value={form.rol} onChange={handleChange} required style={selectStyle()}>
-                  <option value="">Seleccionar rol</option>
-                  <option value="Administrador">Administrador</option>
-                  <option value="Comercial">Usuario Comercial</option>
-                  <option value="Técnico">Líder Tecnico</option>
-                  <option value="Gerente">Gerente</option>
-                </select>
-              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 18 }}>
+                <button type="button" onClick={onCancel} style={{
+                  padding: '10px 14px',
+                  borderRadius: 10,
+                  border: `1px solid ${PALETTE.light}`,
+                  background: 'transparent',
+                  cursor: 'pointer'
+                }}>
+                  Cancelar
+                </button>
 
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <label style={{ fontSize: 13, marginBottom: 6 }}>Email</label>
-                <input name="email" value={form.email} onChange={handleChange} placeholder="correo@inst.com" required style={inputStyle()}/>
+                <button type="submit" style={{
+                  padding: '10px 16px',
+                  borderRadius: 10,
+                  border: 'none',
+                  background: PALETTE.primary,
+                  color: PALETTE.white,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  boxShadow: '0 8px 18px rgba(43,103,119,0.12)'
+                }}>
+                  {loading ? 'Creando usuario...' : 'Guardar usuario'}
+                </button>
               </div>
+            </form>
+          )}
 
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <label style={{ fontSize: 13, marginBottom: 6 }}>Contraseña</label>
-                <input name="password" value={form.password} onChange={handleChange} placeholder="********" type="password" required style={inputStyle()}/>
+          {section === 'clientes' && (
+            <div style={{ display: 'grid', gap: 12, animation: 'fadeSlideIn 180ms ease' }}>
+              <form onSubmit={handleClientSubmit} style={{
+                background: PALETTE.white,
+                padding: 20,
+                borderRadius: 12,
+                boxShadow: '0 12px 30px rgba(43,103,119,0.08)',
+                border: `1px solid ${PALETTE.light}`
+              }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <label style={{ fontSize: 13 }}>ID cliente</label>
+                    <input name="id_cliente" value={clientForm.id_cliente} onChange={handleClientChange} placeholder="auto (opcional)" style={inputStyle()} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <label style={{ fontSize: 13 }}>Nombre</label>
+                    <input name="nombre" value={clientForm.nombre} onChange={handleClientChange} required style={inputStyle()} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <label style={{ fontSize: 13 }}>NIT</label>
+                    <input name="nit" value={clientForm.nit} onChange={handleClientChange} required style={inputStyle()} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <label style={{ fontSize: 13 }}>Dirección</label>
+                    <input name="direccion" value={clientForm.direccion} onChange={handleClientChange} style={inputStyle()} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <label style={{ fontSize: 13 }}>Tipo de régimen</label>
+                    <input name="tipoRegimen" value={clientForm.tipoRegimen} onChange={handleClientChange} placeholder="ej: Común" style={inputStyle()} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <label style={{ fontSize: 13 }}>Municipio</label>
+                    <input name="municipio" value={clientForm.municipio} onChange={handleClientChange} style={inputStyle()} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <label style={{ fontSize: 13 }}>Tipo régimen (alterno)</label>
+                    <input name="tipo_regimen" value={clientForm.tipo_regimen} onChange={handleClientChange} style={inputStyle()} />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <input id="autorrentenedor" name="autorrentenedor" type="checkbox" checked={clientForm.autorrentenedor} onChange={handleClientChange} />
+                    <label htmlFor="autorrentenedor">Autorretenedor</label>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 18 }}>
+                  <button type="button" onClick={onCancel} style={{
+                    padding: '10px 14px',
+                    borderRadius: 10,
+                    border: `1px solid ${PALETTE.light}`,
+                    background: 'transparent',
+                    cursor: 'pointer'
+                  }}>
+                    Cancelar
+                  </button>
+
+                  <button type="submit" style={{
+                    padding: '10px 16px',
+                    borderRadius: 10,
+                    border: 'none',
+                    background: PALETTE.primary,
+                    color: PALETTE.white,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    boxShadow: '0 8px 18px rgba(43,103,119,0.12)'
+                  }}>
+                    Guardar cliente
+                  </button>
+                </div>
+              </form>
+
+              <div style={{ background: '#fff', borderRadius: 12, padding: 14, border: `1px solid ${PALETTE.light}`, boxShadow: '0 12px 30px rgba(43,103,119,0.04)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <h3 style={{ margin: 0, color: PALETTE.primary }}>Clientes</h3>
+                  <span style={{ color: '#667', fontSize: 13 }}>{clients.length} en total</span>
+                </div>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 720 }}>
+                    <thead>
+                      <tr style={{ textAlign: 'left', color: '#334' }}>
+                        <th style={{ padding: '8px 6px' }}>ID</th>
+                        <th style={{ padding: '8px 6px' }}>Nombre</th>
+                        <th style={{ padding: '8px 6px' }}>NIT</th>
+                        <th style={{ padding: '8px 6px' }}>Dirección</th>
+                        <th style={{ padding: '8px 6px' }}>Municipio</th>
+                        <th style={{ padding: '8px 6px' }}>Régimen</th>
+                        <th style={{ padding: '8px 6px' }}>Autorretenedor</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {clients.map(c => (
+                        <tr key={c.id_cliente} style={{ borderTop: '1px solid #f1f1f1' }}>
+                          <td style={{ padding: '8px 6px' }}>{c.id_cliente}</td>
+                          <td style={{ padding: '8px 6px' }}>{c.nombre}</td>
+                          <td style={{ padding: '8px 6px' }}>{c.nit}</td>
+                          <td style={{ padding: '8px 6px' }}>{c.direccion}</td>
+                          <td style={{ padding: '8px 6px' }}>{c.municipio}</td>
+                          <td style={{ padding: '8px 6px' }}>{c.tipoRegimen || c.tipo_regimen}</td>
+                          <td style={{ padding: '8px 6px' }}>{c.autorrentenedor ? 'Sí' : 'No'}</td>
+                        </tr>
+                      ))}
+                      {clients.length === 0 && (
+                        <tr><td colSpan={7} style={{ textAlign: 'center', padding: 12, color: '#777' }}>Sin clientes aún.</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 18 }}>
-              <button type="button" onClick={onCancel} style={{
-                padding: '10px 14px',
-                borderRadius: 10,
-                border: `1px solid ${PALETTE.light}`,
-                background: 'transparent',
-                cursor: 'pointer'
-              }}>
-                Cancelar
-              </button>
-
-              <button type="submit" style={{
-                padding: '10px 16px',
-                borderRadius: 10,
-                border: 'none',
-                background: PALETTE.primary,
-                color: PALETTE.white,
-                fontWeight: 700,
-                cursor: 'pointer',
-                boxShadow: '0 8px 18px rgba(43,103,119,0.12)'
-              }}>
-                {loading ? 'Creando usuario...' : 'Guardar usuario'}
-              </button>
-            </div>
-          </form>
+          )}
 
         </div>
       </div>

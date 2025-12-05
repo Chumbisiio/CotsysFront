@@ -9,9 +9,22 @@ const PALETTE = {
   accent: '#52ab98'
 };
 
+const IconBack = ({ size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M15 6l-6 6 6 6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+const IconUser = ({ size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M20 21v-1a4 4 0 00-4-4H8a4 4 0 00-4 4v1" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+    <circle cx="12" cy="8" r="3.2" stroke="currentColor" strokeWidth="1.4" />
+  </svg>
+);
+
 const rolesDisponibles = ['Administrador', 'Comercial', 'Gerente', 'Técnico'];
 
-export default function EditRoles({ user = { name: 'Empresa - Usuario' }, onCancel }) {
+export default function EditRoles({ user = { name: 'Empresa - Usuario' }, onCancel, onLogout = () => {} }) {
   const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -116,20 +129,31 @@ export default function EditRoles({ user = { name: 'Empresa - Usuario' }, onCanc
     }
   };
 
+  const confirmLogout = () => {
+    const ok = window.confirm('¿Deseas cerrar sesión?');
+    if (!ok) return;
+    onLogout();
+  };
+
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: `linear-gradient(180deg, ${PALETTE.light}, ${PALETTE.gray})`, boxSizing: 'border-box', fontFamily: "Inter, Roboto, -apple-system, 'Segoe UI', sans-serif" }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: `linear-gradient(180deg, ${PALETTE.light}, ${PALETTE.gray})`, boxSizing: 'border-box', fontFamily: "Inter, Roboto, -apple-system, 'Segoe UI', sans-serif", animation: 'fadeSlideIn 240ms ease' }}>
 
       {/* Topbar */}
       <div style={{ height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', background: 'rgba(255,255,255,0.7)', borderBottom: `1px solid ${PALETTE.light}` }}>
-        <div style={{ fontWeight: 700, color: PALETTE.primary }}>CotSys</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button onClick={onCancel} style={{ background: PALETTE.primary, color: '#fff', border: 'none', padding: '8px 12px', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, boxShadow: '0 6px 14px rgba(43,103,119,0.18)' }}>
+            <IconBack /> Volver
+          </button>
+          <div style={{ fontWeight: 700, color: PALETTE.primary }}>CotSys</div>
+        </div>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{ width: 36, height: 36, borderRadius: 18, background: PALETTE.gray, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M20 21v-1a4 4 0 00-4-4H8a4 4 0 00-4 4v1" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              <IconUser size={16} />
             </div>
             <div style={{ fontSize: 14 }}>{user.name}</div>
           </div>
-          <button onClick={onCancel} style={{ background: 'transparent', border: '1px solid rgba(0,0,0,0.06)', padding: '8px 10px', borderRadius: 8, cursor: 'pointer' }}>Volver</button>
+          <button onClick={confirmLogout} style={{ background: PALETTE.primary, color: '#fff', border: 'none', padding: '8px 12px', borderRadius: 8, cursor: 'pointer', boxShadow: '0 6px 14px rgba(43,103,119,0.18)' }}>Cerrar sesión</button>
         </div>
       </div>
 

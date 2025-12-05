@@ -15,10 +15,19 @@ export default function Login({ onLogin }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [showError, setShowError] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
+    setShowError(false);
+
+    if (!email.trim() || !password.trim()) {
+      setError('Por favor completa usuario y contraseña.');
+      setShowError(true);
+      return;
+    }
+
     setLoading(true);
     try {
       const tokens = await login({ email, password });
@@ -35,7 +44,9 @@ export default function Login({ onLogin }) {
       const data = err?.response?.data;
       let msg = typeof data === 'string' ? data : (data?.message || err.message || 'Error de autenticación');
       if (status === 401 || status === 403) msg = 'Credenciales inválidas. Verifica usuario y contraseña.';
+      if (status === 0 || err.message?.includes('Network')) msg = 'No hay conexión con el servidor. Intenta de nuevo.';
       setError(msg);
+      setShowError(true);
     } finally {
       setLoading(false);
     }
@@ -83,6 +94,19 @@ export default function Login({ onLogin }) {
         </header>
 
         <section aria-labelledby="login-form">
+          {showError && error && (
+            <div role="alert" style={{
+              marginBottom: 12,
+              background: '#ffe5e5',
+              color: '#9b1c1c',
+              border: '1px solid #ffc9c9',
+              padding: '10px 12px',
+              borderRadius: 10,
+              fontWeight: 600
+            }}>
+              {error}
+            </div>
+          )}
           <form style={{ display: 'grid', gap: 12 }} onSubmit={handleSubmit}>
 
             <label style={{ fontSize: 13, color: '#223' }} htmlFor="username">Usuario</label>

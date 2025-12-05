@@ -15,3 +15,22 @@ body {
 
 button { font-family: inherit; }
 
+/* Evitar selección de texto general; permitir solo en campos editables */
+* {
+  user-select: none;
+}
+
+input, textarea, select, option {
+  user-select: text;
+}
+
+/* Animación de entrada simple para pantallas (sin mover layout ni provocar scroll) */
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
