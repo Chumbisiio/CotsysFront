@@ -38,13 +38,22 @@ export default function EditRoles({ user = { name: 'Empresa - Usuario' }, onCanc
       setError(null);
       try {
         const data = await getUsuarios();
+        console.log('[EditRoles] Data raw del backend:', data);
+        console.log('[EditRoles] Tipo de data:', typeof data, 'Es array?', Array.isArray(data));
+        if (data.length > 0) {
+          console.log('[EditRoles] Primer usuario completo:', data[0]);
+          console.log('[EditRoles] Claves del primer usuario:', Object.keys(data[0]));
+        }
+        
         const normalized = (Array.isArray(data) ? data : []).map(u => ({
-          id_usuario: u.id_usuario ?? u.id ?? u.userId ?? u.codigo ?? null,
-          nombre: u.nombre ?? u.name ?? u.fullName ?? '',
-          email: u.email ?? u.correo ?? u.mail ?? '',
-          rol: u.rol ?? u.role ?? '',
-          estado: typeof u.estado === 'boolean' ? u.estado : (u.activo ?? u.enabled ?? false)
+          id_usuario: u.usuarioId ?? u.id_usuario ?? u.id ?? null,
+          nombre: u.nombre ?? '',
+          email: u.email ?? '',
+          rol: u.rol ?? '',
+          estado: u.estado ?? false
         })).filter(u => u.id_usuario !== null);
+        
+        console.log('[EditRoles] Usuarios normalizados:', normalized);
         setUsuarios(normalized);
       } catch (err) {
         const msg = err?.response?.data?.message || err.message || 'Error al cargar usuarios';
