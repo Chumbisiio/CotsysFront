@@ -5,6 +5,7 @@ type SessionUser = {
   email: string | null;
   name: string | null;
   role: string | null;
+  userId?: number | null;
 };
 
 export function setTokens(a?: string | null, r?: string | null) {
@@ -80,6 +81,7 @@ export function getSessionUser(): SessionUser {
     const roleRaw: string | undefined = data.rol ?? data.role;
     const name: string | null = data.nombre ?? data.name ?? null;
     const email: string | null = data.sub ?? data.email ?? null;
+    const userId: number | null = data.jti ? Number(data.jti) : null;
     
     let role: string | null = null;
     if (roleRaw) {
@@ -101,10 +103,11 @@ export function getSessionUser(): SessionUser {
     return { 
       email, 
       name: name ? fixUtf8Encoding(name) : null, 
-      role 
+      role,
+      userId
     };
   } catch (e) {
-    return { email: null, name: null, role: null };
+    return { email: null, name: null, role: null, userId: null };
   }
 }
 

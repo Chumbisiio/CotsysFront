@@ -87,7 +87,18 @@ export default function EditRoles({ user = { name: 'Empresa - Usuario' }, onCanc
       }];
       
       await updateUsuarios(payload);
-      setUsuarios(prev => prev.map(u => u.id_usuario === id ? { ...u, ...changed } : u));
+      
+      // Recarga la lista de usuarios desde el backend
+      const data = await getUsuarios();
+      const normalized = (Array.isArray(data) ? data : []).map(u => ({
+        id_usuario: u.usuarioId ?? u.id_usuario ?? u.id ?? null,
+        nombre: u.nombre ?? '',
+        email: u.email ?? '',
+        rol: u.rol ?? '',
+        estado: u.estado ?? false
+      })).filter(u => u.id_usuario !== null);
+      
+      setUsuarios(normalized);
       const next = { ...editBuffer };
       delete next[id];
       setEditBuffer(next);
@@ -114,10 +125,18 @@ export default function EditRoles({ user = { name: 'Empresa - Usuario' }, onCanc
       }));
       
       await updateUsuarios(payload);
-      const updated = usuarios.map(u => 
-        editBuffer[u.id_usuario] ? { ...u, ...editBuffer[u.id_usuario] } : u
-      );
-      setUsuarios(updated);
+      
+      // Recarga la lista de usuarios desde el backend
+      const data = await getUsuarios();
+      const normalized = (Array.isArray(data) ? data : []).map(u => ({
+        id_usuario: u.usuarioId ?? u.id_usuario ?? u.id ?? null,
+        nombre: u.nombre ?? '',
+        email: u.email ?? '',
+        rol: u.rol ?? '',
+        estado: u.estado ?? false
+      })).filter(u => u.id_usuario !== null);
+      
+      setUsuarios(normalized);
       setEditBuffer({});
       setShowToast(true);
       setTimeout(() => setShowToast(false), 1800);
