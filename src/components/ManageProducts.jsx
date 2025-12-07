@@ -1,4 +1,7 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from "react";
+import { getProductos, createProducto, updateProducto, deleteProducto } from "../api/product";
+import { getKits, createKit, updateKit, deleteKit } from "../api/kits";
+
 
 const PALETTE = {
   primary: '#2b6777',
@@ -28,24 +31,24 @@ const IconUser = ({ size = 16 }) => (
 );
 
 export default function ManageProducts({ user = { name: 'Usuario' }, onCancel, onLogout = () => {} }) {
-  const [products, setProducts] = useState([
-    { id_producto: 1, nombre: 'Producto A', descripcion: 'Componente A', categoria: 'Soluciones', unidadMedida: 'unidad', costoBase: 1200.00, monedaOriginal: 'COP', tipo: 'Producto', estado: true, cantidadKit: 1, instruccionesKit: 'Usar con cuidado', kitSolucion: 1001 },
-    { id_producto: 2, nombre: 'Producto B', descripcion: 'Componente B', categoria: 'Construcción', unidadMedida: 'kg', costoBase: 45.50, monedaOriginal: 'USD', tipo: 'Servicio', estado: true, cantidadKit: 0, instruccionesKit: '', kitSolucion: 0 },
-    { id_producto: 3, nombre: 'Producto C', descripcion: 'Componente C', categoria: 'Administración', unidadMedida: 'unidad', costoBase: 30.00, monedaOriginal: 'USD', tipo: 'Producto', estado: true, cantidadKit: 0, instruccionesKit: '', kitSolucion: 0 }
-  ]);
+  const [products, setProducts] = useState([]);
+  const [kits, setKits] = useState([]);
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const data = await getProductos();
+        setProducts(data);
 
-  const [kits, setKits] = useState([
-    {
-      id_kit_solucion: 1001,
-      nombre: 'Kit de solución A',
-      descripcion: 'Agrupa componentes críticos',
-      estado: true,
-      componentes: [
-        { id_componente_kit: 5001, id_producto: 2, cantidad: 2, instrucciones: 'Montar en serie', estado: true },
-        { id_componente_kit: 5002, id_producto: 3, cantidad: 1, instrucciones: 'Integrar al final', estado: true }
-      ]
-    }
-  ]);
+        const kitsData = await getKits();
+        setKits(kitsData);
+
+      } catch (err) {
+        console.error("Error obteniendo productos:", err);
+      }
+    };
+    load();
+  }, []);
+
 
   const [editingProduct, setEditingProduct] = useState(null);
   const [showProductForm, setShowProductForm] = useState(false);
@@ -55,7 +58,7 @@ export default function ManageProducts({ user = { name: 'Usuario' }, onCancel, o
   const emptyProductForm = { id_producto: '', nombre: '', descripcion: '', categoria: '', unidadMedida: '', costoBase: '', monedaOriginal: '', tipo: '', estado: true, cantidadKit: 0, instruccionesKit: '', kitSolucion: '' };
   const [productForm, setProductForm] = useState(emptyProductForm);
 
-  const emptyKitForm = { id_kit_solucion: '', nombre: '', descripcion: '', estado: true, componentes: [{ id_componente_kit: Date.now(), id_producto: '', cantidad: 1, instrucciones: '', estado: true }] };
+  const emptyKitForm = { id_kit: '', nombre: '', descripcion: '', estado: true, componentes: [{ id_componente_kit: Date.now(), id: '', cantidad: 1, instrucciones: '', estado: true }] };
   const [kitForm, setKitForm] = useState(emptyKitForm);
 
   const openProductCreate = () => { setProductForm(emptyProductForm); setEditingProduct(null); setShowProductForm(true); };
@@ -63,7 +66,38 @@ export default function ManageProducts({ user = { name: 'Usuario' }, onCancel, o
   const closeProductForm = () => { setShowProductForm(false); setEditingProduct(null); setProductForm(emptyProductForm); };
 
   const openKitCreate = () => { setKitForm(emptyKitForm); setEditingKit(null); setShowKitForm(true); };
-  const openKitEdit = (k) => { setKitForm({ ...k, componentes: k.componentes.map(c => ({ ...c })) }); setEditingKit(k); setShowKitForm(true); };
+  const openKitEdit = (k) => {
+    console.log("openKitEdit llamado con:", k);
+    if (!k) {
+      console.error("Kit es null o undefined");
+      return;
+    }
+    
+    // Mapear componentes de forma segura
+    const componentes = Array.isArray(k.componentes) && k.componentes.length > 0
+      ? k.componentes.map(c => ({
+          id_componente_kit: c.id_componente_kit || Date.now() + Math.random(),
+          id_producto: String(c.id_producto ?? c.producto ?? ''),
+          cantidad: c.cantidad || 1,
+          instrucciones: c.instrucciones || '',
+          estado: c.estado !== undefined ? c.estado : true
+        }))
+      : [{ id_componente_kit: Date.now(), id_producto: '', cantidad: 1, instrucciones: '', estado: true }];
+    
+    const kitFormData = {
+      id_kit: k.id_kit,
+      nombre: k.nombre || '',
+      descripcion: k.descripcion || '',
+      estado: k.estado !== undefined ? k.estado : true,
+      componentes: componentes
+    };
+    
+    console.log("Datos del formulario a establecer:", kitFormData);
+    setKitForm(kitFormData);
+    setEditingKit(k);
+    setShowKitForm(true);
+    console.log("showKitForm establecido a true");
+  };
   const closeKitForm = () => { setShowKitForm(false); setEditingKit(null); setKitForm(emptyKitForm); };
 
   const handleProductChange = (e) => {
@@ -94,36 +128,97 @@ export default function ManageProducts({ user = { name: 'Usuario' }, onCancel, o
     setKitForm(prev => ({ ...prev, componentes: prev.componentes.filter(c => c.id_componente_kit !== id) }));
   };
 
-  const saveProduct = (e) => {
+  const saveProduct = async (e) => {
     e.preventDefault();
-    if (editingProduct) {
-      setProducts(prev => prev.map(p => p.id_producto === editingProduct.id_producto ? { ...editingProduct, ...productForm, costoBase: Number(productForm.costoBase) } : p));
-    } else {
-      const newId = products.length ? Math.max(...products.map(p => p.id_producto)) + 1 : 1;
-      setProducts(prev => [...prev, { ...productForm, id_producto: newId, costoBase: Number(productForm.costoBase) }]);
+    try {
+      const payload = {
+        nombre: productForm.nombre,
+        descripcion: productForm.descripcion,
+        categoria: productForm.categoria,
+        unidadMedida: productForm.unidadMedida,
+        costoBase: Number(productForm.costoBase),
+        monedaOriginal: productForm.monedaOriginal,
+        tipo: productForm.tipo,
+        estado: productForm.estado,
+      };
+
+      if (editingProduct) {
+        await updateProducto(editingProduct.id_producto, payload);
+      } else {
+        await createProducto(payload);
+      }
+
+      const data = await getProductos(); // recarga lista
+      setProducts(data);
+      closeProductForm();
+    } catch (err) {
+      console.error("Error guardando producto:", err);
+      alert("Error guardando el producto");
     }
-    closeProductForm();
   };
 
-  const saveKit = (e) => {
+
+  const saveKit = async (e) => {
     e.preventDefault();
+  try {
+    // Formatear los datos para el backend
+    const payload = {
+      nombre: kitForm.nombre,
+      descripcion: kitForm.descripcion,
+      estado: kitForm.estado,
+      componentes: kitForm.componentes
+        .filter(c => c.id_producto && c.id_producto !== '') // Filtrar componentes sin producto
+        .map(c => ({
+          id_producto: Number(c.id_producto),
+          cantidad: Number(c.cantidad) || 1,
+          instrucciones: c.instrucciones || '',
+          estado: c.estado !== undefined ? c.estado : true
+        }))
+    };
+
     if (editingKit) {
-      setKits(prev => prev.map(k => k.id_kit_solucion === editingKit.id_kit_solucion ? { ...editingKit, ...kitForm } : k));
+      await updateKit(editingKit.id_kit, payload);
     } else {
-      const newId = kits.length ? Math.max(...kits.map(k => k.id_kit_solucion)) + 1 : 1001;
-      setKits(prev => [...prev, { ...kitForm, id_kit_solucion: newId }]);
+      await createKit(payload);
     }
+    const kitsData = await getKits();
+    setKits(kitsData);
     closeKitForm();
+  } catch (err) {
+    console.error("Error guardando kit:", err);
+    alert("Error guardando el kit");
+  }
+
   };
 
-  const handleDeleteProduct = (id) => {
-    if (!window.confirm('Eliminar producto (simulación)?')) return;
-    setProducts(prev => prev.filter(p => p.id_producto !== id));
+  const handleDeleteProduct = async (id) => {
+    const ok = window.confirm("¿Eliminar producto?");
+    if (!ok) return;
+
+    try {
+      await deleteProducto(id);
+      const data = await getProductos(); // recarga lista
+      setProducts(data);
+    } catch (err) {
+      console.error("Error eliminando producto:", err);
+      alert("No se pudo eliminar");
+    }
   };
 
-  const handleDeleteKit = (id) => {
-    if (!window.confirm('Eliminar kit (simulación)?')) return;
-    setKits(prev => prev.filter(k => k.id_kit_solucion !== id));
+
+  const handleDeleteKit = async (id_kit) => {
+    const ok = window.confirm("¿Eliminar kit?");
+  if (!ok) return;
+
+  try {
+    await deleteKit(id_kit);
+    const kitsData = await getKits();
+    setKits(kitsData);
+  } catch (err) {
+    console.error("Error eliminando kit:", err);
+    alert("No se pudo eliminar el kit");
+  }
+
   };
 
   const confirmLogout = () => {
@@ -222,7 +317,7 @@ export default function ManageProducts({ user = { name: 'Usuario' }, onCancel, o
               </div>
               <div style={{ display: 'grid', gap: 12 }}>
                 {kits.map(kit => (
-                  <div key={kit.id_kit_solucion} style={{ border: `1px solid ${PALETTE.light}`, borderRadius: 10, padding: 12, background: '#fbfcfd' }}>
+                  <div key={kit.id_kit} style={{ border: `1px solid ${PALETTE.light}`, borderRadius: 10, padding: 12, background: '#fbfcfd' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
                         <div style={{ fontWeight: 700, color: '#234' }}>{kit.nombre}</div>
@@ -230,26 +325,35 @@ export default function ManageProducts({ user = { name: 'Usuario' }, onCancel, o
                         <div style={{ marginTop: 4, fontSize: 12, color: kit.estado ? '#2e7d32' : '#b23b3b' }}>{kit.estado ? 'Activo' : 'Inactivo'}</div>
                       </div>
                       <div style={{ display: 'flex', gap: 8 }}>
-                        <button onClick={() => openKitEdit(kit)} style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid ${PALETTE.light}`, background: 'transparent', cursor: 'pointer' }}>Editar</button>
-                        <button onClick={() => handleDeleteKit(kit.id_kit_solucion)} style={{ padding: '6px 10px', borderRadius: 8, border: 'none', background: '#ff6b6b', color: '#fff', cursor: 'pointer' }}>Eliminar</button>
+                        <button 
+                          onClick={() => {
+                            console.log("Click en botón Editar, kit:", kit);
+                            openKitEdit(kit);
+                          }} 
+                          style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid ${PALETTE.light}`, background: 'transparent', cursor: 'pointer' }}>
+                          Editar
+                        </button>
+                        <button onClick={() => handleDeleteKit(kit.id_kit)} style={{ padding: '6px 10px', borderRadius: 8, border: 'none', background: '#ff6b6b', color: '#fff', cursor: 'pointer' }}>Eliminar</button>
                       </div>
                     </div>
                     <div style={{ marginTop: 10 }}>
                       <div style={{ fontSize: 13, fontWeight: 600, color: '#223', marginBottom: 4 }}>Componentes (componente_kit)</div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        {kit.componentes.map(c => {
-                          const prod = products.find(p => p.id_producto === Number(c.id_producto)) || products.find(p => p.id_producto === c.id_producto);
-                          const nombreProd = prod ? prod.nombre : `ID ${c.id_producto}`;
+                        {(kit.componentes && Array.isArray(kit.componentes) ? kit.componentes : []).map(c => {
+                          if (!c) return null;
+                          const idProducto = c.id_producto ?? c.producto;
+                          const prod = products.find(p => p.id_producto === Number(idProducto) || p.id_producto === idProducto);
+                          const nombreProd = prod ? prod.nombre : `ID ${idProducto || 'N/A'}`;
                           return (
-                            <div key={c.id_componente_kit} style={{ padding: 8, borderRadius: 8, background: '#fff', border: `1px solid ${PALETTE.light}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div key={c.id_componente_kit || c.id || Math.random()} style={{ padding: 8, borderRadius: 8, background: '#fff', border: `1px solid ${PALETTE.light}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                               <div>
                                 <div style={{ fontWeight: 600 }}>{nombreProd}</div>
-                                <div style={{ fontSize: 12, color: '#556' }}>Cant: {c.cantidad} · Instr: {c.instrucciones || 'N/A'}</div>
+                                <div style={{ fontSize: 12, color: '#556' }}>Cant: {c.cantidad || 0} · Instr: {c.instrucciones || 'N/A'}</div>
                               </div>
                               <div style={{ fontSize: 12, color: c.estado ? '#2e7d32' : '#b23b3b' }}>{c.estado ? 'Activo' : 'Inactivo'}</div>
                             </div>
                           );
-                        })}
+                        }).filter(Boolean)}
                       </div>
                     </div>
                   </div>
@@ -303,9 +407,32 @@ export default function ManageProducts({ user = { name: 'Usuario' }, onCancel, o
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <label style={{ fontSize: 13 }}>Moneda original</label>
-                <input name="monedaOriginal" value={productForm.monedaOriginal} onChange={handleProductChange} style={inputStyle()} />
+                <label style={{ fontSize: 13 }}>Moneda Original</label>
+                <select
+                 name="monedaOriginal"
+                 value={productForm.monedaOriginal || ''}
+                 onChange={handleProductChange}
+                 style={inputStyle()}>
+                   <option value="">Seleccionar</option>
+                   <option value="COP">COP</option>
+                   <option value="USD">USD</option>
+                </select>
               </div>
+
+
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <label style={{ fontSize: 13 }}>Tipo</label>
+                <select
+                 name="tipo"
+                 value={productForm.tipo}
+                 onChange={handleProductChange}
+                 style={inputStyle()}>
+                   <option value="">Seleccionar</option>
+                   <option value="Producto">Producto</option>
+                   <option value="Servicio">Servicio</option>
+                </select>
+              </div>
+
 
               <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column' }}>
                 <label style={{ fontSize: 13 }}>Descripción</label>
@@ -328,7 +455,7 @@ export default function ManageProducts({ user = { name: 'Usuario' }, onCancel, o
       )}
 
       {showKitForm && (
-        <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.28)' }}>
+        <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.28)', zIndex: 1000 }}>
           <div style={{ width: 900, maxWidth: '96%', background: '#fff', borderRadius: 12, padding: 20, boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <h3 style={{ margin: 0, color: PALETTE.primary }}>{editingKit ? 'Editar kit' : 'Nuevo kit'}</h3>
@@ -337,8 +464,8 @@ export default function ManageProducts({ user = { name: 'Usuario' }, onCancel, o
 
             <form onSubmit={saveKit} style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <label style={{ fontSize: 13 }}>ID kit_solución</label>
-                <input name="id_kit_solucion" value={kitForm.id_kit_solucion} onChange={handleKitChange} placeholder="auto (opcional)" style={inputStyle()} />
+                <label style={{ fontSize: 13 }}>ID kit</label>
+                <input name="id_kit" value={kitForm.id_kit} onChange={handleKitChange} placeholder="auto (opcional)" style={inputStyle()} />
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -367,10 +494,10 @@ export default function ManageProducts({ user = { name: 'Usuario' }, onCancel, o
                   {kitForm.componentes.map((c, idx) => (
                     <div key={c.id_componente_kit} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: 8, alignItems: 'center', border: `1px solid ${PALETTE.light}`, borderRadius: 10, padding: 8 }}>
                       <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <label style={{ fontSize: 12 }}>Producto (id_producto)</label>
-                        <select value={c.id_producto} onChange={(e) => handleComponentChange(idx, 'id_producto', e.target.value)} style={inputStyle()}>
+                        <label style={{ fontSize: 12 }}>Producto (id)</label>
+                        <select value={String(c.id_producto || '')} onChange={(e) => handleComponentChange(idx, 'id_producto', e.target.value)} style={inputStyle()}>
                           <option value="">Seleccionar</option>
-                          {products.map(p => <option key={p.id_producto} value={p.id_producto}>{p.id_producto} - {p.nombre}</option>)}
+                          {products.map(p => <option key={p.id_producto} value={String(p.id_producto)}>{p.id_producto} - {p.nombre}</option>)}
                         </select>
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column' }}>

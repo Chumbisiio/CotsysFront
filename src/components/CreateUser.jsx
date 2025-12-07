@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { createUsuario } from '../api/user';
+import {getClientes, createCliente, updateCliente, deleteCliente} from '../api/client';
+
 
 const PALETTE = {
   primary: '#2b6777',
@@ -45,15 +47,30 @@ export default function CreateUser({ user = { name: 'Usuario' }, onCancel, onLog
     nit: '',
     direccion: '',
     tipoRegimen: '',
-    autorrentenedor: false,
     municipio: '',
-    tipo_regimen: ''
+    autorrentenedor: false,
   });
+
   const [clients, setClients] = useState([]);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
   const [section, setSection] = useState('usuarios');
+
+  React.useEffect(() => {
+    async function load() {
+      try {
+        const data = await getClientes();   // ← Llama la API real del backend
+        setClients(data);                   // ← Guarda los clientes del backend en el estado
+      } catch (err) {
+        console.error("Error cargando clientes:", err);
+        setError("No se pudieron cargar los clientes.");
+      }
+    }
+
+    load();
+  }, []); 
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -66,6 +83,7 @@ export default function CreateUser({ user = { name: 'Usuario' }, onCancel, onLog
         rol: form.rol,
         password: form.password
       });
+      setToastMessage('Usuario guardado correctamente.');
       setShowToast(true);
       setTimeout(() => setShowToast(false), 2000);
       setForm({nombre: '', email: '', rol: '', password: ''});
@@ -93,23 +111,50 @@ export default function CreateUser({ user = { name: 'Usuario' }, onCancel, onLog
     setClientForm(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
   };
 
-  const handleClientSubmit = (e) => {
+  const handleClientSubmit = async (e) => {
     e.preventDefault();
+    setError(null);
+    setLoading(true);
     if (!clientForm.nombre || !clientForm.nit) {
-      setError('Completa al menos nombre y NIT del cliente.');
+      setError("Completa al menos nombre y NIT del cliente.");
+      setLoading(false);
       return;
     }
-    const newId = clients.length ? Math.max(...clients.map(c => c.id_cliente || 0)) + 1 : 1;
-    const next = { ...clientForm, id_cliente: clientForm.id_cliente || newId };
-    setClients(prev => {
-      const exists = prev.some(c => c.id_cliente === next.id_cliente);
-      if (exists) return prev.map(c => c.id_cliente === next.id_cliente ? next : c);
-      return [...prev, next];
-    });
-    setClientForm({ id_cliente: '', nombre: '', nit: '', direccion: '', tipoRegimen: '', autorrentenedor: false, municipio: '', tipo_regimen: '' });
-    setError(null);
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 2000);
+    try {
+      await createCliente({
+        nombre: clientForm.nombre.trim(),
+        nit: clientForm.nit.trim(),
+        direccion: clientForm.direccion?.trim() || '',
+        tipoRegimen: clientForm.tipoRegimen?.trim() || '',
+        municipio: clientForm.municipio?.trim() || '',
+        autorrentenedor: clientForm.autorrentenedor || false
+      });
+      
+      // Recargar la lista de clientes
+      const data = await getClientes();
+      setClients(data);
+      
+      setClientForm({
+        id_cliente: '',
+        nombre: '',
+        nit: '',
+        direccion: '',
+        tipoRegimen: '',
+        autorrentenedor: false,
+        municipio: '',
+      });
+      setToastMessage('Cliente guardado correctamente.');
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 2000);
+    } catch (err) {
+      const msg =
+      err?.response?.data?.message ||
+      err?.response?.data ||
+      "Error al crear cliente";
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const confirmLogout = () => {
@@ -269,9 +314,9 @@ export default function CreateUser({ user = { name: 'Usuario' }, onCancel, onLog
                   <label style={{ fontSize: 13, marginBottom: 6 }}>Rol</label>
                   <select name="rol" value={form.rol} onChange={handleChange} required style={selectStyle()}>
                     <option value="">Seleccionar rol</option>
-                    <option value="Administrador">Administrador</option>
-                    <option value="Comercial">Usuario Comercial</option>
-                    <option value="Técnico">Técnico</option>
+                    <option value="ADMINISTRADOR">Administrador</option>
+                    <option value="COMERCIAL">Usuario Comercial</option>
+                    <option value="LIDER_TECNICO">Líder Técnico</option>
                   </select>
                 </div>
 
@@ -347,10 +392,6 @@ export default function CreateUser({ user = { name: 'Usuario' }, onCancel, onLog
                     <label style={{ fontSize: 13 }}>Municipio</label>
                     <input name="municipio" value={clientForm.municipio} onChange={handleClientChange} style={inputStyle()} />
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <label style={{ fontSize: 13 }}>Tipo régimen (alterno)</label>
-                    <input name="tipo_regimen" value={clientForm.tipo_regimen} onChange={handleClientChange} style={inputStyle()} />
-                  </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <input id="autorrentenedor" name="autorrentenedor" type="checkbox" checked={clientForm.autorrentenedor} onChange={handleClientChange} />
                     <label htmlFor="autorrentenedor">Autorretenedor</label>
@@ -368,17 +409,17 @@ export default function CreateUser({ user = { name: 'Usuario' }, onCancel, onLog
                     Cancelar
                   </button>
 
-                  <button type="submit" style={{
+                  <button type="submit" disabled={loading} style={{
                     padding: '10px 16px',
                     borderRadius: 10,
                     border: 'none',
-                    background: PALETTE.primary,
+                    background: loading ? '#ccc' : PALETTE.primary,
                     color: PALETTE.white,
                     fontWeight: 700,
-                    cursor: 'pointer',
+                    cursor: loading ? 'not-allowed' : 'pointer',
                     boxShadow: '0 8px 18px rgba(43,103,119,0.12)'
                   }}>
-                    Guardar cliente
+                    {loading ? 'Guardando cliente...' : 'Guardar cliente'}
                   </button>
                 </div>
               </form>
@@ -409,7 +450,7 @@ export default function CreateUser({ user = { name: 'Usuario' }, onCancel, onLog
                           <td style={{ padding: '8px 6px' }}>{c.nit}</td>
                           <td style={{ padding: '8px 6px' }}>{c.direccion}</td>
                           <td style={{ padding: '8px 6px' }}>{c.municipio}</td>
-                          <td style={{ padding: '8px 6px' }}>{c.tipoRegimen || c.tipo_regimen}</td>
+                          <td style={{ padding: '8px 6px' }}>{c.tipoRegimen}</td>
                           <td style={{ padding: '8px 6px' }}>{c.autorrentenedor ? 'Sí' : 'No'}</td>
                         </tr>
                       ))}
@@ -441,7 +482,7 @@ export default function CreateUser({ user = { name: 'Usuario' }, onCancel, onLog
           borderRadius: 10,
           boxShadow: '0 8px 20px rgba(0,0,0,0.16)'
         }}>
-          Usuario guardado correctamente.
+          {toastMessage}
         </div>
       )}
 
