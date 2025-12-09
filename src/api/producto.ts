@@ -31,6 +31,29 @@ export async function getProductos(): Promise<Producto[]> {
   return resp.data || [];
 }
 
+export async function createProducto(producto: any) {
+  const response = await api.post('/productos/create-producto', producto);
+  return response.data;
+}
+
+export async function updateProducto(id_producto: number, producto: any) {
+  const response = await api.put(`/productos/${id_producto}/update-producto`, producto);
+  return response.data;
+}
+
+export async function deleteProducto(id_producto: number) {
+  try {
+    const response = await api.delete(`/productos/${id_producto}/delete-producto`);
+    return response;
+  } catch (error: any) {
+    // Si es 204 (No Content), es exitoso
+    if (error.response?.status === 204) {
+      return { status: 204 };
+    }
+    throw error;
+  }
+}
+
 export async function getKits(): Promise<Kit[]> {
   const resp = await api.get('/kits/get-all-kits');
   return resp.data || [];

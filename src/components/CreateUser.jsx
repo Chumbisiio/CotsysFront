@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createUsuario } from '../api/user';
-import {getClientes, createCliente, updateCliente, deleteCliente} from '../api/client';
+import {getClientes, createCliente} from '../api/cliente';
 
 
 const PALETTE = {
@@ -314,9 +314,9 @@ export default function CreateUser({ user = { name: 'Usuario' }, onCancel, onLog
                   <label style={{ fontSize: 13, marginBottom: 6 }}>Rol</label>
                   <select name="rol" value={form.rol} onChange={handleChange} required style={selectStyle()}>
                     <option value="">Seleccionar rol</option>
-                    <option value="ADMINISTRADOR">Administrador</option>
-                    <option value="COMERCIAL">Usuario Comercial</option>
-                    <option value="LIDER_TECNICO">Líder Técnico</option>
+                    <option value="Administrador">Administrador</option>
+                    <option value="Comercial">Usuario Comercial</option>
+                    <option value="Técnico">Líder Técnico</option>
                   </select>
                 </div>
 
@@ -368,10 +368,6 @@ export default function CreateUser({ user = { name: 'Usuario' }, onCancel, onLog
                 border: `1px solid ${PALETTE.light}`
               }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
-                  <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <label style={{ fontSize: 13 }}>ID cliente</label>
-                    <input name="id_cliente" value={clientForm.id_cliente} onChange={handleClientChange} placeholder="auto (opcional)" style={inputStyle()} />
-                  </div>
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
                     <label style={{ fontSize: 13 }}>Nombre</label>
                     <input name="nombre" value={clientForm.nombre} onChange={handleClientChange} required style={inputStyle()} />

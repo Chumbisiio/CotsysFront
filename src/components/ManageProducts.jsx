@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getProductos, createProducto, updateProducto, deleteProducto } from "../api/product";
+import { getProductos, createProducto, updateProducto, deleteProducto, getProductoById } from "../api/producto";
 import { getKits, createKit, updateKit, deleteKit } from "../api/kits";
 
 
@@ -30,7 +30,35 @@ const IconUser = ({ size = 16 }) => (
   </svg>
 );
 
-export default function ManageProducts({ user = { name: 'Usuario' }, onCancel, onLogout = () => {} }) {
+// Componente para cargar y mostrar el nombre del producto
+function ComponenteKitRow({ componente }) {
+  const [nombreProducto, setNombreProducto] = useState(`Cargando...`);
+
+  useEffect(() => {
+    const cargarProducto = async () => {
+      try {
+        const producto = await getProductoById(componente.id_producto);
+        setNombreProducto(producto.nombre);
+      } catch (err) {
+        console.error(`Error cargando producto ${componente.id_producto}:`, err);
+        setNombreProducto(`ID ${componente.id_producto}`);
+      }
+    };
+    cargarProducto();
+  }, [componente.id_producto]);
+
+  return (
+    <div style={{ padding: 8, borderRadius: 8, background: '#fff', border: `1px solid ${PALETTE.light}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div>
+        <div style={{ fontWeight: 600 }}>{nombreProducto}</div>
+        <div style={{ fontSize: 12, color: '#556' }}>Cant: {componente.cantidad || 0} · Instr: {componente.instrucciones || 'N/A'}</div>
+      </div>
+      <div style={{ fontSize: 12, color: componente.estado ? '#2e7d32' : '#b23b3b' }}>{componente.estado ? 'Activo' : 'Inactivo'}</div>
+    </div>
+  );
+}
+
+export default function ManageProducts({ user = { name: 'Usuario' }, onCancel, onLogout = () => { } }) {
   const [products, setProducts] = useState([]);
   const [kits, setKits] = useState([]);
   useEffect(() => {
@@ -54,11 +82,17 @@ export default function ManageProducts({ user = { name: 'Usuario' }, onCancel, o
   const [showProductForm, setShowProductForm] = useState(false);
   const [editingKit, setEditingKit] = useState(null);
   const [showKitForm, setShowKitForm] = useState(false);
+  const [showToastSaveP, setShowToastSaveP] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+  const [showToastDeleteP, setShowToastDeleteP] = useState(false);
+  const [showToastDeleteK, setShowToastDeleteK] = useState(false);
+  const [showToastSaveK, setShowToastSaveK] = useState(false);
+  const [showToastUpdtKit, setShowToastUpdtKit] = useState(false);
 
-  const emptyProductForm = { id_producto: '', nombre: '', descripcion: '', categoria: '', unidadMedida: '', costoBase: '', monedaOriginal: '', tipo: '', estado: true, cantidadKit: 0, instruccionesKit: '', kitSolucion: '' };
+  const emptyProductForm = { id: '', nombre: '', descripcion: '', categoria: '', unidadMedida: '', costoBase: '', monedaOriginal: '', tipo: '', estado: true };
   const [productForm, setProductForm] = useState(emptyProductForm);
 
-  const emptyKitForm = { id_kit: '', nombre: '', descripcion: '', estado: true, componentes: [{ id_componente_kit: Date.now(), id: '', cantidad: 1, instrucciones: '', estado: true }] };
+  const emptyKitForm = { id_kit: '', nombre: '', descripcion: '', estado: true, componentes: [{ id_componente_kit: Date.now(), productoSeleccionado: '', cantidad: 1, instrucciones: '', estado: true }] };
   const [kitForm, setKitForm] = useState(emptyKitForm);
 
   const openProductCreate = () => { setProductForm(emptyProductForm); setEditingProduct(null); setShowProductForm(true); };
@@ -67,23 +101,23 @@ export default function ManageProducts({ user = { name: 'Usuario' }, onCancel, o
 
   const openKitCreate = () => { setKitForm(emptyKitForm); setEditingKit(null); setShowKitForm(true); };
   const openKitEdit = (k) => {
-    console.log("openKitEdit llamado con:", k);
     if (!k) {
       console.error("Kit es null o undefined");
       return;
     }
-    
+
     // Mapear componentes de forma segura
+    console.log("Componentes originales del kit:", k.componentes);
     const componentes = Array.isArray(k.componentes) && k.componentes.length > 0
-      ? k.componentes.map(c => ({
-          id_componente_kit: c.id_componente_kit || Date.now() + Math.random(),
-          id_producto: String(c.id_producto ?? c.producto ?? ''),
-          cantidad: c.cantidad || 1,
-          instrucciones: c.instrucciones || '',
-          estado: c.estado !== undefined ? c.estado : true
-        }))
-      : [{ id_componente_kit: Date.now(), id_producto: '', cantidad: 1, instrucciones: '', estado: true }];
-    
+      ? k.componentes.map(c => (console.log("Componente a mapear:", c), {
+        id_componente_kit: c.id_componente_kit || Date.now() + Math.random(),
+        id_producto: c.id_producto,
+        cantidad: c.cantidad || 1,
+        instrucciones: c.instrucciones || '',
+        estado: c.estado !== undefined ? c.estado : true
+      }))
+      : [{ id_componente_kit: Date.now(), id: '', cantidad: 1, instrucciones: '', estado: true }];
+
     const kitFormData = {
       id_kit: k.id_kit,
       nombre: k.nombre || '',
@@ -91,12 +125,11 @@ export default function ManageProducts({ user = { name: 'Usuario' }, onCancel, o
       estado: k.estado !== undefined ? k.estado : true,
       componentes: componentes
     };
-    
+
     console.log("Datos del formulario a establecer:", kitFormData);
     setKitForm(kitFormData);
     setEditingKit(k);
     setShowKitForm(true);
-    console.log("showKitForm establecido a true");
   };
   const closeKitForm = () => { setShowKitForm(false); setEditingKit(null); setKitForm(emptyKitForm); };
 
@@ -120,7 +153,7 @@ export default function ManageProducts({ user = { name: 'Usuario' }, onCancel, o
   const addComponentRow = () => {
     setKitForm(prev => ({
       ...prev,
-      componentes: [...prev.componentes, { id_componente_kit: Date.now(), id_producto: '', cantidad: 1, instrucciones: '', estado: true }]
+      componentes: [...prev.componentes, { id_componente_kit: Date.now(), id: '', cantidad: 1, instrucciones: '', estado: true }]
     }));
   };
 
@@ -143,9 +176,13 @@ export default function ManageProducts({ user = { name: 'Usuario' }, onCancel, o
       };
 
       if (editingProduct) {
-        await updateProducto(editingProduct.id_producto, payload);
+        await updateProducto(editingProduct.id, payload);
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 2000);
       } else {
         await createProducto(payload);
+        setShowToastSaveP(true);
+        setTimeout(() => setShowToastSaveP(false), 2000);
       }
 
       const data = await getProductos(); // recarga lista
@@ -160,34 +197,44 @@ export default function ManageProducts({ user = { name: 'Usuario' }, onCancel, o
 
   const saveKit = async (e) => {
     e.preventDefault();
-  try {
-    // Formatear los datos para el backend
-    const payload = {
-      nombre: kitForm.nombre,
-      descripcion: kitForm.descripcion,
-      estado: kitForm.estado,
-      componentes: kitForm.componentes
-        .filter(c => c.id_producto && c.id_producto !== '') // Filtrar componentes sin producto
-        .map(c => ({
-          id_producto: Number(c.id_producto),
-          cantidad: Number(c.cantidad) || 1,
-          instrucciones: c.instrucciones || '',
-          estado: c.estado !== undefined ? c.estado : true
-        }))
-    };
+    try {
+      // Formatear los datos para el backend
+      const payload = {
+        nombre: kitForm.nombre,
+        descripcion: kitForm.descripcion,
+        estado: kitForm.estado,
+        componentes: kitForm.componentes
+          .filter(c => c.id_producto && c.id_producto !== '') // Filtrar componentes sin producto
+          .map(c => ({
+            id_producto: Number(c.id_producto),
+            cantidad: Number(c.cantidad) || 1,
+            instrucciones: c.instrucciones || '',
+            estado: c.estado !== undefined ? c.estado : true
+          }))
+      };
 
-    if (editingKit) {
-      await updateKit(editingKit.id_kit, payload);
-    } else {
-      await createKit(payload);
+      if (!payload.componentes.length) {
+        alert('Agrega al menos un producto o servicio antes de guardar.');
+        return;
+      }
+
+
+      if (editingKit) {
+        await updateKit(editingKit.id_kit, payload);
+        setShowToastUpdtKit(true);
+        setTimeout(() => setShowToastUpdtKit(false), 2000);
+      } else {
+        await createKit(payload);
+        setShowToastSaveK(true);
+        setTimeout(() => setShowToastSaveK(false), 2000);
+      }
+      const kitsData = await getKits();
+      setKits(kitsData);
+      closeKitForm();
+    } catch (err) {
+      console.error("Error guardando kit:", err);
+      alert("Error guardando el kit");
     }
-    const kitsData = await getKits();
-    setKits(kitsData);
-    closeKitForm();
-  } catch (err) {
-    console.error("Error guardando kit:", err);
-    alert("Error guardando el kit");
-  }
 
   };
 
@@ -198,6 +245,8 @@ export default function ManageProducts({ user = { name: 'Usuario' }, onCancel, o
     try {
       await deleteProducto(id);
       const data = await getProductos(); // recarga lista
+      setShowToastDeleteP(true);
+      setTimeout(() => setShowToastDeleteP(false), 2000);
       setProducts(data);
     } catch (err) {
       console.error("Error eliminando producto:", err);
@@ -208,16 +257,18 @@ export default function ManageProducts({ user = { name: 'Usuario' }, onCancel, o
 
   const handleDeleteKit = async (id_kit) => {
     const ok = window.confirm("¿Eliminar kit?");
-  if (!ok) return;
+    if (!ok) return;
 
-  try {
-    await deleteKit(id_kit);
-    const kitsData = await getKits();
-    setKits(kitsData);
-  } catch (err) {
-    console.error("Error eliminando kit:", err);
-    alert("No se pudo eliminar el kit");
-  }
+    try {
+      await deleteKit(id_kit);
+      setShowToastDeleteK(true);
+      setTimeout(() => setShowToastDeleteK(false), 2000);
+      const kitsData = await getKits();
+      setKits(kitsData);
+    } catch (err) {
+      console.error("Error eliminando kit:", err);
+      alert("No se pudo eliminar el kit");
+    }
 
   };
 
@@ -288,8 +339,8 @@ export default function ManageProducts({ user = { name: 'Usuario' }, onCancel, o
                   </thead>
                   <tbody>
                     {products.map(p => (
-                      <tr key={p.id_producto} style={{ borderTop: '1px solid #f1f1f1' }}>
-                        <td style={{ padding: '10px 8px' }}>{p.id_producto}</td>
+                      <tr key={p.id} style={{ borderTop: '1px solid #f1f1f1' }}>
+                        <td style={{ padding: '10px 8px' }}>{p.id}</td>
                         <td style={{ padding: '10px 8px' }}>{p.nombre}</td>
                         <td style={{ padding: '10px 8px' }}>{p.categoria}</td>
                         <td style={{ padding: '10px 8px' }}>{p.unidadMedida}</td>
@@ -300,7 +351,7 @@ export default function ManageProducts({ user = { name: 'Usuario' }, onCancel, o
                         <td style={{ padding: '10px 8px' }}>
                           <div style={{ display: 'flex', gap: 8 }}>
                             <button onClick={() => openProductEdit(p)} style={{ padding: '6px 8px', borderRadius: 8, border: `1px solid ${PALETTE.light}`, background: 'transparent', cursor: 'pointer' }}>Editar</button>
-                            <button onClick={() => handleDeleteProduct(p.id_producto)} style={{ padding: '6px 8px', borderRadius: 8, border: 'none', background: '#ff6b6b', color: '#fff', cursor: 'pointer' }}>Eliminar</button>
+                            <button onClick={() => handleDeleteProduct(p.id)} style={{ padding: '6px 8px', borderRadius: 8, border: 'none', background: '#ff6b6b', color: '#fff', cursor: 'pointer' }}>Eliminar</button>
                           </div>
                         </td>
                       </tr>
@@ -325,11 +376,10 @@ export default function ManageProducts({ user = { name: 'Usuario' }, onCancel, o
                         <div style={{ marginTop: 4, fontSize: 12, color: kit.estado ? '#2e7d32' : '#b23b3b' }}>{kit.estado ? 'Activo' : 'Inactivo'}</div>
                       </div>
                       <div style={{ display: 'flex', gap: 8 }}>
-                        <button 
+                        <button
                           onClick={() => {
-                            console.log("Click en botón Editar, kit:", kit);
                             openKitEdit(kit);
-                          }} 
+                          }}
                           style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid ${PALETTE.light}`, background: 'transparent', cursor: 'pointer' }}>
                           Editar
                         </button>
@@ -337,21 +387,12 @@ export default function ManageProducts({ user = { name: 'Usuario' }, onCancel, o
                       </div>
                     </div>
                     <div style={{ marginTop: 10 }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: '#223', marginBottom: 4 }}>Componentes (componente_kit)</div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#223', marginBottom: 4 }}>Componentes</div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                         {(kit.componentes && Array.isArray(kit.componentes) ? kit.componentes : []).map(c => {
                           if (!c) return null;
-                          const idProducto = c.id_producto ?? c.producto;
-                          const prod = products.find(p => p.id_producto === Number(idProducto) || p.id_producto === idProducto);
-                          const nombreProd = prod ? prod.nombre : `ID ${idProducto || 'N/A'}`;
                           return (
-                            <div key={c.id_componente_kit || c.id || Math.random()} style={{ padding: 8, borderRadius: 8, background: '#fff', border: `1px solid ${PALETTE.light}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <div>
-                                <div style={{ fontWeight: 600 }}>{nombreProd}</div>
-                                <div style={{ fontSize: 12, color: '#556' }}>Cant: {c.cantidad || 0} · Instr: {c.instrucciones || 'N/A'}</div>
-                              </div>
-                              <div style={{ fontSize: 12, color: c.estado ? '#2e7d32' : '#b23b3b' }}>{c.estado ? 'Activo' : 'Inactivo'}</div>
-                            </div>
+                            <ComponenteKitRow key={c.id_componente_kit} componente={c} />
                           );
                         }).filter(Boolean)}
                       </div>
@@ -381,41 +422,38 @@ export default function ManageProducts({ user = { name: 'Usuario' }, onCancel, o
             </div>
 
             <form onSubmit={saveProduct} style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <label style={{ fontSize: 13 }}>ID producto</label>
-                <input name="id_producto" value={productForm.id_producto} onChange={handleProductChange} placeholder="auto (opcional)" style={inputStyle()} />
-              </div>
 
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <label style={{ fontSize: 13 }}>Nombre</label>
-                <input name="nombre" value={productForm.nombre} onChange={handleProductChange} required style={inputStyle()} />
+                <input name="nombre" value={productForm.nombre} onChange={handleProductChange} style={inputStyle()} required />
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <label style={{ fontSize: 13 }}>Categoria</label>
-                <input name="categoria" value={productForm.categoria} onChange={handleProductChange} style={inputStyle()} />
+                <input name="categoria" value={productForm.categoria} onChange={handleProductChange} style={inputStyle()} required />
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <label style={{ fontSize: 13 }}>Unidad de medida</label>
-                <input name="unidadMedida" value={productForm.unidadMedida} onChange={handleProductChange} style={inputStyle()} />
+                <input name="unidadMedida" value={productForm.unidadMedida} onChange={handleProductChange} style={inputStyle()} required />
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <label style={{ fontSize: 13 }}>Costo base</label>
-                <input name="costoBase" value={productForm.costoBase} onChange={handleProductChange} type="number" step="0.01" style={inputStyle()} />
+                <input name="costoBase" value={productForm.costoBase} onChange={handleProductChange} type="number" step="0.01" style={inputStyle()} required />
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <label style={{ fontSize: 13 }}>Moneda Original</label>
                 <select
-                 name="monedaOriginal"
-                 value={productForm.monedaOriginal || ''}
-                 onChange={handleProductChange}
-                 style={inputStyle()}>
-                   <option value="">Seleccionar</option>
-                   <option value="COP">COP</option>
-                   <option value="USD">USD</option>
+                  name="monedaOriginal"
+                  value={productForm.monedaOriginal || ''}
+                  onChange={handleProductChange}
+                  style={inputStyle()}
+                  required>
+                  <option value="">Seleccionar</option>
+                  <option value="COP">COP</option>
+                  <option value="USD">USD</option>
                 </select>
               </div>
 
@@ -423,20 +461,21 @@ export default function ManageProducts({ user = { name: 'Usuario' }, onCancel, o
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <label style={{ fontSize: 13 }}>Tipo</label>
                 <select
-                 name="tipo"
-                 value={productForm.tipo}
-                 onChange={handleProductChange}
-                 style={inputStyle()}>
-                   <option value="">Seleccionar</option>
-                   <option value="Producto">Producto</option>
-                   <option value="Servicio">Servicio</option>
+                  name="tipo"
+                  value={productForm.tipo}
+                  onChange={handleProductChange}
+                  style={inputStyle()}
+                  required>
+                  <option value="">Seleccionar</option>
+                  <option value="Producto">Producto</option>
+                  <option value="Servicio">Servicio</option>
                 </select>
               </div>
 
 
               <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column' }}>
                 <label style={{ fontSize: 13 }}>Descripción</label>
-                <textarea name="descripcion" value={productForm.descripcion} onChange={handleProductChange} rows={3} style={{ ...inputStyle(), resize: 'vertical' }} />
+                <textarea name="descripcion" value={productForm.descripcion} onChange={handleProductChange} rows={3} style={{ ...inputStyle(), resize: 'vertical' }} required />
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -463,24 +502,19 @@ export default function ManageProducts({ user = { name: 'Usuario' }, onCancel, o
             </div>
 
             <form onSubmit={saveKit} style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <label style={{ fontSize: 13 }}>ID kit</label>
-                <input name="id_kit" value={kitForm.id_kit} onChange={handleKitChange} placeholder="auto (opcional)" style={inputStyle()} />
+              <div style={{ display: 'flex', flexDirection: 'column', gridColumn: '1 / -1' }}>
+                <label style={{ fontSize: 13 }}>Nombre</label>
+                <input name="nombre" value={kitForm.nombre} onChange={handleKitChange} style={inputStyle()} required />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gridColumn: '1 / -1' }}>
+                <label style={{ fontSize: 13 }}>Descripción</label>
+                <textarea name="descripcion" value={kitForm.descripcion} onChange={handleKitChange} rows={3} style={{ ...inputStyle(), resize: 'vertical' }} required />
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <input id="estadoKit" name="estado" type="checkbox" checked={kitForm.estado} onChange={handleKitChange} />
                 <label htmlFor="estadoKit">Activo</label>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gridColumn: '1 / -1' }}>
-                <label style={{ fontSize: 13 }}>Nombre</label>
-                <input name="nombre" value={kitForm.nombre} onChange={handleKitChange} required style={inputStyle()} />
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gridColumn: '1 / -1' }}>
-                <label style={{ fontSize: 13 }}>Descripción</label>
-                <textarea name="descripcion" value={kitForm.descripcion} onChange={handleKitChange} rows={3} style={{ ...inputStyle(), resize: 'vertical' }} />
               </div>
 
               <div style={{ gridColumn: '1 / -1' }}>
@@ -492,17 +526,18 @@ export default function ManageProducts({ user = { name: 'Usuario' }, onCancel, o
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {kitForm.componentes.map((c, idx) => (
+                    console.log("Renderizando componente de kit:", c),
                     <div key={c.id_componente_kit} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: 8, alignItems: 'center', border: `1px solid ${PALETTE.light}`, borderRadius: 10, padding: 8 }}>
                       <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <label style={{ fontSize: 12 }}>Producto (id)</label>
-                        <select value={String(c.id_producto || '')} onChange={(e) => handleComponentChange(idx, 'id_producto', e.target.value)} style={inputStyle()}>
+                        <label style={{ fontSize: 12 }}>Producto</label>
+                        <select name="productoSeleccionado" value={c.id_producto} onChange={(e) => handleComponentChange(idx, 'id_producto', e.target.value)} style={inputStyle()} required>
                           <option value="">Seleccionar</option>
-                          {products.map(p => <option key={p.id_producto} value={String(p.id_producto)}>{p.id_producto} - {p.nombre}</option>)}
+                          {products.map(p => <option key={p.productoId ?? p.id} value={String(p.productoId ?? p.id)}>{p.nombre}</option>)}
                         </select>
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column' }}>
                         <label style={{ fontSize: 12 }}>Cantidad</label>
-                        <input type="number" value={c.cantidad} onChange={(e) => handleComponentChange(idx, 'cantidad', e.target.value)} style={inputStyle()} />
+                        <input type="number" value={c.cantidad} onChange={(e) => handleComponentChange(idx, 'cantidad', e.target.value)} style={inputStyle()} required />
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column' }}>
                         <label style={{ fontSize: 12 }}>Estado</label>
@@ -527,6 +562,96 @@ export default function ManageProducts({ user = { name: 'Usuario' }, onCancel, o
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {showToast && (
+        <div style={{
+          position: 'fixed',
+          right: 20,
+          bottom: 80,
+          background: PALETTE.primary,
+          color: '#fff',
+          padding: '10px 14px',
+          borderRadius: 10,
+          boxShadow: '0 8px 20px rgba(0,0,0,0.16)'
+        }}>
+          Producto editado correctamente.
+        </div>
+      )}
+
+      {showToastSaveP && (
+        <div style={{
+          position: 'fixed',
+          right: 20,
+          bottom: 80,
+          background: PALETTE.primary,
+          color: '#fff',
+          padding: '10px 14px',
+          borderRadius: 10,
+          boxShadow: '0 8px 20px rgba(0,0,0,0.16)'
+        }}>
+          Producto guardado correctamente.
+        </div>
+      )}
+
+      {showToastDeleteP && (
+        <div style={{
+          position: 'fixed',
+          right: 20,
+          bottom: 80,
+          background: PALETTE.primary,
+          color: '#fff',
+          padding: '10px 14px',
+          borderRadius: 10,
+          boxShadow: '0 8px 20px rgba(0,0,0,0.16)'
+        }}>
+          Producto eliminado correctamente.
+        </div>
+      )}
+
+      {showToastUpdtKit && (
+        <div style={{
+          position: 'fixed',
+          right: 20,
+          bottom: 80,
+          background: PALETTE.primary,
+          color: '#fff',
+          padding: '10px 14px',
+          borderRadius: 10,
+          boxShadow: '0 8px 20px rgba(0,0,0,0.16)'
+        }}>
+          Kit editado correctamente.
+        </div>
+      )}
+
+      {showToastSaveK && (
+        <div style={{
+          position: 'fixed',
+          right: 20,
+          bottom: 80,
+          background: PALETTE.primary,
+          color: '#fff',
+          padding: '10px 14px',
+          borderRadius: 10,
+          boxShadow: '0 8px 20px rgba(0,0,0,0.16)'
+        }}>
+          Kit guardado correctamente.
+        </div>
+      )}
+
+      {showToastDeleteK && (
+        <div style={{
+          position: 'fixed',
+          right: 20,
+          bottom: 80,
+          background: PALETTE.primary,
+          color: '#fff',
+          padding: '10px 14px',
+          borderRadius: 10,
+          boxShadow: '0 8px 20px rgba(0,0,0,0.16)'
+        }}>
+          Kit eliminado correctamente.
         </div>
       )}
 
